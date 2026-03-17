@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>🎛️ ホスト管理</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;700;900&family=Kaisei+Opti:wght@400;700&display=swap');
+:root{
+  --bg:#0a0a14;--surface:#141428;--surface2:#1e1e38;
+  --accent:#ff6b35;--accent2:#ffd166;--teal:#06d6a0;
+  --blue:#4895ef;--purple:#a78bfa;--text:#f0eaff;--sub:#8880aa;
+  --border:rgba(255,255,255,.08);--red:#ef476f;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{background:var(--bg);font-family:'Zen Kaku Gothic New',sans-serif;color:var(--text);min-height:100svh;padding-bottom:40px}
+body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellipse 60% 40% at 20% 10%,rgba(167,139,250,.1) 0%,transparent 50%),radial-gradient(ellipse 50% 30% at 80% 80%,rgba(255,107,53,.08) 0%,transparent 50%);pointer-events:none}
+.app{max-width:520px;margin:0 auto;padding:0 16px}
+.header{padding:20px 0 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}
+.header-title{font-family:'Kaisei Opti',serif;font-size:1.2rem;font-weight:700;color:var(--purple)}
+.badge{background:var(--surface2);border:1px solid var(--border);border-radius:100px;padding:5px 14px;font-size:.8rem;color:var(--teal);display:flex;align-items:center;gap:6px}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--teal);box-shadow:0 0 6px var(--teal);animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.section{margin-bottom:24px}
+.section-title{font-size:.65rem;letter-spacing:.2em;text-transform:uppercase;font-weight:900;color:var(--sub);margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.section-title::after{content:'';flex:1;height:1px;background:var(--border)}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:18px;margin-bottom:12px;position:relative;overflow:hidden}
+.card-accent{position:absolute;top:0;left:0;right:0;height:2px}
+.ca-orange{background:linear-gradient(90deg,var(--accent),var(--accent2))}
+.ca-teal{background:linear-gradient(90deg,var(--teal),var(--blue))}
+.ca-blue{background:linear-gradient(90deg,var(--blue),var(--purple))}
+.ca-red{background:linear-gradient(90deg,var(--red),var(--accent))}
+.btn{padding:12px 20px;border-radius:12px;border:none;font-family:'Zen Kaku Gothic New',sans-serif;font-size:.9rem;font-weight:700;cursor:pointer;transition:all .2s}
+.btn:active{transform:scale(.96)}
+.btn:disabled{opacity:.4;cursor:default;transform:none}
+.btn-primary{background:linear-gradient(135deg,var(--accent),#e05520);color:white}
+.btn-teal{background:linear-gradient(135deg,var(--teal),#04a87e);color:#0a2a20;font-weight:900}
+.btn-blue{background:linear-gradient(135deg,var(--blue),#2d6fd4);color:white}
+.btn-purple{background:linear-gradient(135deg,var(--purple),#7c5fe6);color:white}
+.btn-ghost{background:transparent;border:1.5px solid var(--border);color:var(--sub)}
+.btn-danger{background:linear-gradient(135deg,var(--red),#c0235e);color:white}
+.btn-full{width:100%}
+.btn-sm{padding:8px 14px;font-size:.8rem}
+.btn-row{display:flex;gap:10px;flex-wrap:wrap}
+/* ステータスパネル */
+.stat-panel{background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:16px;display:flex;gap:16px;margin-bottom:20px}
+.stat-item{flex:1;text-align:center}
+.stat-num{font-size:1.8rem;font-weight:900;font-family:'Kaisei Opti',serif;line-height:1}
+.stat-label{font-size:.65rem;color:var(--sub);margin-top:4px;letter-spacing:.1em}
+/* モードバッジ */
+.mode-badge{display:inline-flex;align-items:center;gap:6px;padding:5px 12px;border-radius:100px;font-size:.75rem;font-weight:700;margin-bottom:14px}
+.mb-idle{background:rgba(255,255,255,.06);color:var(--sub)}
+.mb-active{background:rgba(6,214,160,.15);color:var(--teal);border:1px solid rgba(6,214,160,.3)}
+.mb-done{background:rgba(72,149,239,.15);color:var(--blue);border:1px solid rgba(72,149,239,.3)}
+/* 質問結果バー */
+.result-bars{display:flex;flex-direction:column;gap:8px;margin-top:14px}
+.result-row{display:flex;align-items:center;gap:10px;font-size:.85rem}
+.result-label{min-width:100px;color:var(--text);font-size:.8rem}
+.result-bar-bg{flex:1;height:12px;background:var(--surface2);border-radius:100px;overflow:hidden}
+.result-bar-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:100px;transition:width .6s ease}
+.result-num{min-width:52px;text-align:right;color:var(--sub);font-size:.8rem}
+/* QRコード */
+.qr-area{display:flex;flex-direction:column;align-items:center;gap:12px;padding:8px 0}
+#qrCanvas{border-radius:12px;background:white;padding:12px}
+.qr-url{font-size:.75rem;color:var(--sub);text-align:center;word-break:break-all}
+/* ゲーム結果 */
+.game-results{display:flex;flex-direction:column;gap:6px;margin-top:12px}
+.game-result-row{display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:var(--surface2);border-radius:10px;font-size:.85rem}
+/* メッセージ割り当て */
+.assign-list{display:flex;flex-direction:column;gap:6px;margin-top:10px}
+.assign-row{display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--surface2);border-radius:10px;font-size:.85rem}
+/* ホスト参加バナー */
+.host-banner{background:linear-gradient(135deg,rgba(167,139,250,.1),rgba(72,149,239,.1));border:1px solid rgba(167,139,250,.3);border-radius:14px;padding:12px 16px;font-size:.85rem;color:var(--purple);display:flex;align-items:center;gap:10px;margin-bottom:20px;flex-wrap:wrap}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="header">
+    <div class="header-title">🎛️ ホスト管理</div>
+    <div class="badge"><div class="dot"></div><span id="pCount">0人</span></div>
+  </header>
+
+  <div class="host-banner">
+    🙋 ホストも参加できます →
+    <a href="index.html" target="_blank" style="color:var(--accent2);font-weight:700;text-decoration:none">参加者画面を開く ↗</a>
+  </div>
+
+  <div class="stat-panel">
+    <div class="stat-item"><div class="stat-num" id="sParticipants" style="color:var(--teal)">0</div><div class="stat-label">ONLINE</div></div>
+    <div class="stat-item"><div class="stat-num" id="sMode" style="color:var(--accent);font-size:1.1rem">待機</div><div class="stat-label">MODE</div></div>
+    <div class="stat-item"><div class="stat-num" id="sRound" style="color:var(--accent2)">-</div><div class="stat-label">ROUND</div></div>
+  </div>
+
+  <!-- QRコード -->
+  <div class="section">
+    <div class="section-title">📱 参加QRコード</div>
+    <div class="card">
+      <div class="card-accent ca-blue"></div>
+      <div class="qr-area">
+        <canvas id="qrCanvas" width="200" height="200"></canvas>
+        <div class="qr-url">https://kojimayouichi.github.io/nomikai-app/</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 全体操作 -->
+  <div class="section">
+    <div class="section-title">⚙️ 全体操作</div>
+    <div class="card">
+      <div class="card-accent ca-red"></div>
+      <div style="font-size:.85rem;color:var(--sub);margin-bottom:12px">全員を終了画面へ遷移させます</div>
+      <button class="btn btn-danger btn-full" onclick="endAll()">🏁 全員の画面を終了する</button>
+    </div>
+  </div>
+
+  <!-- 質問ゲーム -->
+  <div class="section">
+    <div class="section-title">❓ 質問ゲーム</div>
+    <div class="card">
+      <div class="card-accent ca-orange"></div>
+      <div class="mode-badge mb-idle" id="qBadge">● 待機中</div>
+      <div style="font-size:.85rem;color:var(--sub);margin-bottom:14px">究極の選択を3問ランダム出題。全員回答→集計→次へ、を繰り返します。</div>
+      <div class="btn-row">
+        <button class="btn btn-primary" id="qStartBtn" onclick="startQuestion()">▶ 質問モード開始</button>
+        <button class="btn btn-ghost btn-sm" onclick="resetMode()">リセット</button>
+      </div>
+      <div id="qStatus" style="margin-top:14px"></div>
+      <div class="result-bars" id="qResultBars"></div>
+    </div>
+  </div>
+
+  <!-- 早押しゲーム -->
+  <div class="section">
+    <div class="section-title">🔴 早押しゲーム</div>
+    <div class="card">
+      <div class="card-accent ca-teal"></div>
+      <div class="mode-badge mb-idle" id="gBadge">● 待機中</div>
+      <div style="font-size:.85rem;color:var(--sub);margin-bottom:14px">10秒カウントダウン後に早押し。2回戦制。最後の人にランダムお題が出ます。</div>
+      <div class="btn-row">
+        <button class="btn btn-teal" id="gStartBtn" onclick="startGame()">▶ ゲームモード開始</button>
+        <button class="btn btn-ghost btn-sm" onclick="resetMode()">リセット</button>
+      </div>
+      <div class="game-results" id="gResults"></div>
+    </div>
+  </div>
+
+  <!-- メッセージ -->
+  <div class="section">
+    <div class="section-title">💬 匿名メッセージ</div>
+    <div class="card">
+      <div class="card-accent ca-blue"></div>
+      <div class="mode-badge mb-idle" id="mBadge">● 待機中</div>
+      <div style="font-size:.85rem;color:var(--sub);margin-bottom:14px">参加者を輪番に割り当て、匿名でメッセージを送り合います。2回戦制。</div>
+      <div class="btn-row">
+        <button class="btn btn-blue" id="mStartBtn" onclick="startMessage()">▶ メッセージモード開始</button>
+        <button class="btn btn-ghost btn-sm" onclick="resetMode()">リセット</button>
+      </div>
+      <div class="assign-list" id="mAssignList"></div>
+    </div>
+  </div>
+
+</div>
+
+<!-- QRコード生成ライブラリ -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+<script src="config.js"></script>
+<script>
+
+firebase.initializeApp(FIREBASE_CONFIG);
+const db = firebase.database();
+
+// ============================================================
+// 質問データ
+// ============================================================
+const QUESTIONS = [
+  { text:'親友と好きな人が被ったら……',        choices:['譲る','譲らない'],                          cat:'恋愛' },
+  { text:'付き合うなら……',                     choices:['性格の悪い美男美女','性格の良い不細工'],    cat:'恋愛' },
+  { text:'選ぶなら……',                         choices:['誰にでも優しい人','自分にだけ優しい人'],    cat:'恋愛' },
+  { text:'恋人にするなら……',                   choices:['お金にルーズな人','時間にルーズな人'],      cat:'恋愛' },
+  { text:'究極のパートナーは……',               choices:['何でも許してくれる人','叱ってくれる人'],    cat:'恋愛' },
+  { text:'選ぶなら……',                         choices:['元恋人が100人いる人','0人の人'],            cat:'恋愛' },
+  { text:'もらえるなら……',                     choices:['確実にもらえる1,000万円','1/2で1億円'],     cat:'金銭' },
+  { text:'なれるなら……',                       choices:['嫌われ者の大金持ち','愛される貧乏人'],      cat:'金銭' },
+  { text:'お金で1つ買うなら……',               choices:['健康','時間'],                              cat:'金銭' },
+  { text:'自分がなるなら……',                   choices:['時間のない億万長者','時間のある貧乏人'],    cat:'金銭' },
+  { text:'生き残れるのは……',                   choices:['全人類が滅亡','自分と大切な人だけ生き残る'],cat:'人生' },
+  { text:'欲しい能力は……',                     choices:['未来に行ける能力','過去に行ける能力'],      cat:'人生' },
+  { text:'どちらか片方だけなら……',             choices:['結婚を選ぶ','出世を選ぶ'],                  cat:'人生' },
+  { text:'知りたいのは……',                     choices:['自分の命日','自分の死に方'],                cat:'人生' },
+  { text:'望む人生は……',                       choices:['平凡で長生き','短命でも激動の人生'],        cat:'人生' },
+  { text:'働くなら……',                         choices:['安くてやりがいのある仕事','高いがやりがいなし'],cat:'仕事' },
+  { text:'部下にするなら……',                   choices:['有能だが揉める人','スキル低いが素直な人'],  cat:'仕事' },
+  { text:'どちらの環境がいい？',               choices:['田舎で年収1,000万円','都会で年収500万円'],  cat:'仕事' },
+  { text:'上司にするなら……',                   choices:['性格が合うが仕事できない','きつくて仕事できる'],cat:'仕事' },
+  { text:'月20万不労所得が入るなら……',         choices:['今後も働く','働かない'],                    cat:'仕事' },
+];
+
+// 早押しお題
+const ODAI = [
+  '勝った人のいいところを1つ言ってください',
+  '勝った人を見習いたいところを正直に言ってください',
+  '勝った人への感謝の言葉を贈ってください',
+  '勝った人に負けを認める一言を言ってください',
+  '勝った人へのエールを送ってください',
+];
+
+// ============================================================
+// 状態
+// ============================================================
+let participants = {};
+let currentMode  = 'idle';
+let qUsed        = [];   // 使用済み質問インデックス
+let qRound       = 0;    // 質問ラウンド (0-2)
+let gRound       = 0;    // ゲームラウンド (0-1)
+let mRound       = 0;    // メッセージラウンド (0-1)
+let gAutoTimer   = null;
+
+// ============================================================
+// Firebase リスナー
+// ============================================================
+db.ref('presence').on('value', snap => {
+  participants = snap.exists() ? snap.val() : {};
+  const n = Object.keys(participants).length;
+  document.getElementById('pCount').textContent       = n + '人';
+  document.getElementById('sParticipants').textContent = n;
+});
+
+db.ref('mode').on('value', snap => {
+  currentMode = snap.val() || 'idle';
+  const modeLabels = { idle:'待機', question:'質問', game:'ゲーム', message:'メッセージ', end:'終了' };
+  document.getElementById('sMode').textContent = modeLabels[currentMode] || currentMode;
+});
+
+db.ref('question').on('value', snap => {
+  const q = snap.val() || {};
+  updateQUI(q);
+  // 全員nextReady押したら次の質問へ自動進行
+  if (q.active && q.nextReady && q.participants) {
+    const readyCount = Object.keys(q.nextReady).length;
+    if (readyCount >= q.participants) advanceQuestion();
+  }
+});
+
+db.ref('game').on('value', snap => {
+  const g = snap.val() || {};
+  updateGUI(g);
+  // 全員がbuzzしたらdoneにする（または一定時間後）
+});
+
+db.ref('message').on('value', snap => {
+  const m = snap.val() || {};
+  updateMUI(m);
+  // 全員送信済みなら次ラウンドへ
+  if (m.assignments && m.messages) {
+    const assignCount = Object.keys(m.assignments).length;
+    const msgCount    = Object.keys(m.messages).length;
+    if (assignCount > 0 && msgCount >= assignCount && !m.roundDone) {
+      db.ref('message/roundDone').set(true);
+      setTimeout(() => advanceMessage(), 8000); // 8秒後に次へ
+    }
+  }
+});
+
+// ============================================================
+// QRコード生成
+// ============================================================
+window.addEventListener('load', () => {
+  try {
+    new QRCode(document.getElementById('qrCanvas'), {
+      text: 'https://kojimayouichi.github.io/nomikai-app/',
+      width: 180, height: 180,
+      colorDark: '#000000', colorLight: '#ffffff',
+      correctLevel: QRCode.CorrectLevel.M
+    });
+  } catch(e) {
+    document.getElementById('qrCanvas').style.display = 'none';
+  }
+});
+
+// ============================================================
+// 質問モード
+// ============================================================
+window.startQuestion = async function() {
+  qUsed  = [];
+  qRound = 0;
+  await db.ref('mode').set('question');
+  publishNextQuestion();
+};
+
+function publishNextQuestion() {
+  if (qRound >= 3) {
+    // 3問終了
+    finishQuestion();
+    return;
+  }
+  // 未使用の質問をランダム選択
+  const available = QUESTIONS.map((_, i) => i).filter(i => !qUsed.includes(i));
+  const idx       = available[Math.floor(Math.random() * available.length)];
+  qUsed.push(idx);
+  qRound++;
+
+  const pCount = Object.keys(participants).length;
+  db.ref('question').set({
+    active:       true,
+    round:        qRound,
+    text:         QUESTIONS[idx].text,
+    choices:      QUESTIONS[idx].choices,
+    cat:          QUESTIONS[idx].cat,
+    votes:        {},
+    answered:     0,
+    participants: pCount,
+    nextReady:    {}
+  });
+  document.getElementById('sRound').textContent = qRound + '/3';
+}
+
+function advanceQuestion() {
+  // 連続呼び出し防止
+  db.ref('question/active').once('value', snap => {
+    if (!snap.val()) return;
+    db.ref('question/active').set(false);
+    setTimeout(() => publishNextQuestion(), 1500);
+  });
+}
+
+function finishQuestion() {
+  db.ref('question').set({ active: false });
+  db.ref('mode').set('idle');
+  document.getElementById('sRound').textContent = '-';
+}
+
+function updateQUI(q) {
+  const badge   = document.getElementById('qBadge');
+  const statusEl= document.getElementById('qStatus');
+  const barsEl  = document.getElementById('qResultBars');
+  const startBtn= document.getElementById('qStartBtn');
+
+  if (currentMode === 'question' && q.active) {
+    badge.className   = 'mode-badge mb-active';
+    badge.textContent = `▶ 質問中 ${q.round || 1}/3問目`;
+    startBtn.disabled = true;
+    statusEl.innerHTML= `<div style="font-size:.8rem;color:var(--sub)">${q.answered || 0}/${q.participants || 0}人が回答済み</div>`;
+    // 集計バー
+    const votes = q.votes || {};
+    const total = Object.values(votes).reduce((s,v) => s+v, 0);
+    barsEl.innerHTML = (q.choices || []).map((c, i) => {
+      const count = votes[i] || 0;
+      const pct   = total > 0 ? Math.round(count / total * 100) : 0;
+      return `<div class="result-row">
+        <div class="result-label">${c}</div>
+        <div class="result-bar-bg"><div class="result-bar-fill" style="width:${pct}%"></div></div>
+        <div class="result-num">${count}票 (${pct}%)</div>
+      </div>`;
+    }).join('');
+  } else if (currentMode !== 'question') {
+    badge.className   = 'mode-badge mb-idle';
+    badge.textContent = '● 待機中';
+    startBtn.disabled = false;
+    barsEl.innerHTML  = '';
+    statusEl.innerHTML= '';
+  }
+}
+
+// ============================================================
+// ゲームモード
+// ============================================================
+window.startGame = async function() {
+  gRound = 0;
+  await db.ref('mode').set('game');
+  startBuzzRound();
+};
+
+function startBuzzRound() {
+  gRound++;
+  if (gRound > 2) {
+    finishGame();
+    return;
+  }
+  document.getElementById('sRound').textContent = gRound + '/2';
+  // カウントダウン開始
+  db.ref('game').set({
+    status:        'countdown',
+    round:         gRound,
+    countdownStart: firebase.database.ServerValue.TIMESTAMP,
+    results:       {}
+  });
+  // 10秒後にready
+  if (gAutoTimer) clearTimeout(gAutoTimer);
+  gAutoTimer = setTimeout(() => {
+    db.ref('game/status').once('value', snap => {
+      if (snap.val() === 'countdown') db.ref('game/status').set('ready');
+    });
+    // readyから30秒後に強制done
+    gAutoTimer = setTimeout(() => {
+      db.ref('game/status').once('value', snap => {
+        if (snap.val() === 'ready') finalizeBuzzRound();
+      });
+    }, 30000);
+  }, 10000);
+}
+
+function finalizeBuzzRound() {
+  db.ref('game/results').once('value', snap => {
+    const results = snap.val() || {};
+    const sorted  = Object.entries(results).sort((a,b) => {
+      return (a[1].ts || 0) - (b[1].ts || 0);
+    });
+    const odai = ODAI[Math.floor(Math.random() * ODAI.length)];
+    db.ref('game').update({ status: 'done', odai, sortedResults: sorted.map(([id]) => id) });
+
+    // 8秒後に次ラウンドへ
+    setTimeout(() => {
+      if (gRound < 2) startBuzzRound();
+      else finishGame();
+    }, 8000);
+  });
+}
+
+function finishGame() {
+  if (gAutoTimer) { clearTimeout(gAutoTimer); gAutoTimer = null; }
+  db.ref('game').set({ status: 'idle' });
+  db.ref('mode').set('idle');
+  document.getElementById('sRound').textContent = '-';
+}
+
+function updateGUI(g) {
+  const badge   = document.getElementById('gBadge');
+  const resEl   = document.getElementById('gResults');
+  const startBtn= document.getElementById('gStartBtn');
+
+  if (currentMode === 'game') {
+    startBtn.disabled = true;
+    if (g.status === 'countdown') {
+      badge.className   = 'mode-badge mb-active';
+      badge.textContent = `⏳ カウントダウン中 (${g.round || 1}/2)`;
+    } else if (g.status === 'ready') {
+      badge.className   = 'mode-badge mb-active';
+      badge.textContent = `🔴 早押し受付中 (${g.round || 1}/2)`;
+      // ホストが手動でdoneにするボタン
+      resEl.innerHTML   = `<button class="btn btn-teal btn-full" onclick="finalizeBuzzRound()">✅ 結果確定（全員押した）</button>`;
+    } else if (g.status === 'done') {
+      badge.className   = 'mode-badge mb-done';
+      badge.textContent = `✅ ラウンド${g.round || 1} 終了`;
+      const results = Object.entries(g.results || {}).sort((a,b) => (a[1].ts||0)-(b[1].ts||0));
+      resEl.innerHTML   = results.length === 0 ? '<div style="color:var(--sub);font-size:.8rem">回答者なし</div>'
+        : results.map(([id, r], i) => `
+            <div class="game-result-row">
+              <span>${i+1}位: 参加者${r.num || id.slice(-3)}番</span>
+              ${i===results.length-1 ? `<span style="color:var(--red);font-weight:700">🐢 最遅</span>` : ''}
+              ${i===0 ? `<span style="color:var(--accent2);font-weight:700">🏆 最速</span>` : ''}
+            </div>`).join('');
+    }
+  } else {
+    badge.className   = 'mode-badge mb-idle';
+    badge.textContent = '● 待機中';
+    startBtn.disabled = false;
+    resEl.innerHTML   = '';
+  }
+}
+
+// ============================================================
+// メッセージモード
+// ============================================================
+window.startMessage = async function() {
+  mRound = 0;
+  await db.ref('mode').set('message');
+  startMessageRound();
+};
+
+function startMessageRound() {
+  mRound++;
+  if (mRound > 2) {
+    finishMessage();
+    return;
+  }
+  document.getElementById('sRound').textContent = mRound + '/2';
+
+  const ids  = Object.keys(participants).sort();
+  const n    = ids.length;
+  if (n < 2) { finishMessage(); return; }
+
+  // 輪番割り当て: A→B, B→C, ..., N→A
+  const assignments = {};
+  const nums        = {};
+  ids.forEach((id, i) => {
+    assignments[id] = ids[(i + 1) % n];
+    nums[id]        = i + 1;
+  });
+
+  db.ref('message').set({
+    round:       mRound,
+    assignments,
+    nums,
+    messages:    {},
+    roundDone:   false
+  });
+}
+
+function advanceMessage() {
+  db.ref('message/roundDone').once('value', snap => {
+    if (!snap.val()) return;
+    if (mRound < 2) startMessageRound();
+    else finishMessage();
+  });
+}
+
+function finishMessage() {
+  db.ref('message').set({ active: false });
+  db.ref('mode').set('idle');
+  document.getElementById('sRound').textContent = '-';
+}
+
+function updateMUI(m) {
+  const badge   = document.getElementById('mBadge');
+  const listEl  = document.getElementById('mAssignList');
+  const startBtn= document.getElementById('mStartBtn');
+
+  if (currentMode === 'message' && m.assignments) {
+    badge.className   = 'mode-badge mb-active';
+    badge.textContent = `▶ メッセージ中 ${m.round || 1}/2回目`;
+    startBtn.disabled = true;
+    const msgs    = m.messages || {};
+    const nums    = m.nums     || {};
+    listEl.innerHTML = Object.entries(m.assignments).map(([from, to]) => {
+      const sent = !!msgs[from];
+      return `<div class="assign-row">
+        <span style="color:var(--sub)">${nums[from] || '?'}番 → ${nums[to] || '?'}番</span>
+        <span style="margin-left:auto;font-size:.75rem;color:${sent?'var(--teal)':'var(--sub)'}">${sent?'✅ 送信済み':'未送信'}</span>
+      </div>`;
+    }).join('');
+  } else {
+    badge.className   = 'mode-badge mb-idle';
+    badge.textContent = '● 待機中';
+    startBtn.disabled = false;
+    listEl.innerHTML  = '';
+  }
+}
+
+// ============================================================
+// 全体操作
+// ============================================================
+window.resetMode = function() {
+  if (!confirm('現在のモードをリセットしてidleに戻しますか？')) return;
+  if (gAutoTimer) { clearTimeout(gAutoTimer); gAutoTimer = null; }
+  db.ref('mode').set('idle');
+  db.ref('question').set({ active: false });
+  db.ref('game').set({ status: 'idle' });
+  db.ref('message').set({ active: false });
+};
+
+window.endAll = function() {
+  if (!confirm('全員の画面を終了画面へ移動させますか？')) return;
+  db.ref('mode').set('end');
+};
+
+window.finalizeBuzzRound = finalizeBuzzRound;
+</script>
+</body>
+</html>

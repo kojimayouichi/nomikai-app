@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>🍺 のみかい</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;700;900&family=Kaisei+Opti:wght@400;700&display=swap');
+:root {
+  --bg:#0f0f1a; --surface:#1a1a2e; --surface2:#252540;
+  --accent:#ff6b35; --accent2:#ffd166; --teal:#06d6a0;
+  --blue:#4895ef; --text:#f0eaff; --sub:#9990bb;
+  --border:rgba(255,255,255,0.08); --red:#ef476f;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{background:var(--bg);font-family:'Zen Kaku Gothic New',sans-serif;color:var(--text);min-height:100svh;overflow-x:hidden}
+body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellipse 80% 50% at 50% -10%,rgba(255,107,53,.12) 0%,transparent 60%),radial-gradient(ellipse 60% 40% at 90% 90%,rgba(72,149,239,.08) 0%,transparent 50%);pointer-events:none;z-index:0}
+.app{position:relative;z-index:1;max-width:480px;margin:0 auto;min-height:100svh;display:flex;flex-direction:column}
+.header{padding:20px 20px 16px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border)}
+.header-title{font-family:'Kaisei Opti',serif;font-size:1.3rem;font-weight:700;background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.status-dot{width:8px;height:8px;border-radius:50%;background:var(--teal);box-shadow:0 0 8px var(--teal);animation:pulse 2s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(.8)}}
+.main{flex:1;padding:16px 16px 40px;display:flex;flex-direction:column;gap:16px}
+/* 待機 */
+.waiting{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;padding:40px 20px;text-align:center}
+.waiting-icon{font-size:4rem;animation:float 3s ease-in-out infinite}
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
+.waiting-text{font-size:1.1rem;color:var(--sub);line-height:1.7}
+.my-num{font-size:3rem;font-weight:900;font-family:'Kaisei Opti',serif;background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+/* カード */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:20px;position:relative;overflow:hidden}
+.card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--accent),var(--accent2))}
+.card.teal::before{background:linear-gradient(90deg,var(--teal),var(--blue))}
+.card.blue::before{background:linear-gradient(90deg,var(--blue),#a78bfa)}
+.card-label{font-size:.65rem;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:var(--accent);margin-bottom:8px}
+.card.teal .card-label{color:var(--teal)}
+.card.blue .card-label{color:var(--blue)}
+.card-title{font-family:'Kaisei Opti',serif;font-size:1.25rem;font-weight:700;line-height:1.5;margin-bottom:16px}
+/* 質問 */
+.choices{display:flex;flex-direction:column;gap:10px}
+.choice-btn{width:100%;padding:14px 16px;border-radius:14px;border:1.5px solid var(--border);background:var(--surface2);color:var(--text);font-family:'Zen Kaku Gothic New',sans-serif;font-size:1rem;font-weight:700;cursor:pointer;text-align:left;display:flex;align-items:center;justify-content:space-between;position:relative;overflow:hidden;transition:all .2s}
+.choice-btn::before{content:'';position:absolute;left:0;top:0;bottom:0;width:0;background:rgba(255,107,53,.15);transition:width .5s ease}
+.choice-btn.voted::before{width:var(--pct)}
+.choice-btn.selected{border-color:var(--accent);background:rgba(255,107,53,.12)}
+.choice-btn:disabled{cursor:default}
+.choice-btn:active:not(:disabled){transform:scale(.98)}
+.choice-text{position:relative;z-index:1;flex:1}
+.choice-meta{position:relative;z-index:1;display:flex;align-items:center;gap:6px;min-width:70px;justify-content:flex-end}
+.choice-pct{font-size:.85rem;color:var(--accent2);font-weight:700;min-width:36px;text-align:right}
+.choice-count{font-size:.8rem;color:var(--sub)}
+.choice-check{color:var(--accent)}
+.q-progress{font-size:.75rem;color:var(--sub);text-align:center;margin-bottom:10px}
+/* 次へボタン */
+.next-btn{width:100%;padding:16px;border-radius:16px;border:none;background:linear-gradient(135deg,var(--accent),#e05520);color:white;font-family:'Zen Kaku Gothic New',sans-serif;font-size:1rem;font-weight:700;cursor:pointer;margin-top:14px;transition:all .2s}
+.next-btn:active{transform:scale(.97)}
+.next-btn:disabled{opacity:.4;cursor:default;transform:none}
+/* 早押し */
+.game-area{display:flex;flex-direction:column;align-items:center;gap:20px;padding:10px 0}
+.countdown-num{font-size:5rem;font-weight:900;font-family:'Kaisei Opti',serif;line-height:1;transition:all .3s}
+.countdown-num.urgent{color:var(--red);animation:urgentPulse .5s ease-in-out infinite alternate}
+@keyframes urgentPulse{from{transform:scale(1)}to{transform:scale(1.1)}}
+.buzz-hint{font-size:1rem;color:var(--sub);text-align:center;animation:fadeIn .3s ease}
+.buzz-btn{width:200px;height:200px;border-radius:50%;border:none;background:radial-gradient(circle at 35% 35%,#ff8c5a,var(--accent),#cc4400);color:white;font-family:'Kaisei Opti',serif;font-size:1.4rem;font-weight:700;cursor:pointer;box-shadow:0 0 0 8px rgba(255,107,53,.15),0 0 0 16px rgba(255,107,53,.07),0 8px 32px rgba(255,107,53,.4);transition:all .15s;-webkit-user-select:none;user-select:none;position:relative;overflow:hidden}
+.buzz-btn::before{content:'';position:absolute;top:15%;left:20%;width:30%;height:20%;background:rgba(255,255,255,.25);border-radius:50%;filter:blur(4px)}
+.buzz-btn:active{transform:scale(.93)}
+.buzz-btn:disabled{background:radial-gradient(circle,#444,#222);box-shadow:none;cursor:default;opacity:.6}
+.buzz-btn.winner{background:radial-gradient(circle at 35% 35%,#ffe066,var(--accent2),#cc8800);box-shadow:0 0 0 8px rgba(255,209,102,.2),0 0 40px rgba(255,209,102,.5);animation:winnerPulse .6s ease}
+.buzz-btn.loser{background:radial-gradient(circle,#333,#1a1a1a);box-shadow:none}
+@keyframes winnerPulse{0%{transform:scale(1)}30%{transform:scale(1.12)}60%{transform:scale(.97)}100%{transform:scale(1)}}
+.result-banner{width:100%;padding:16px;border-radius:16px;text-align:center;font-size:1.2rem;font-weight:900;font-family:'Kaisei Opti',serif;animation:bannerIn .4s cubic-bezier(.175,.885,.32,1.275)}
+.result-banner.win{background:linear-gradient(135deg,rgba(255,209,102,.2),rgba(6,214,160,.2));border:2px solid var(--accent2);color:var(--accent2)}
+.result-banner.lose{background:rgba(255,255,255,.04);border:1px solid var(--border);color:var(--sub)}
+.result-banner.last{background:rgba(239,71,111,.1);border:2px solid var(--red);color:var(--red)}
+@keyframes bannerIn{from{transform:scale(.8) translateY(10px);opacity:0}to{transform:scale(1) translateY(0);opacity:1}}
+.odai-box{width:100%;padding:16px;border-radius:16px;background:rgba(255,209,102,.08);border:1.5px solid rgba(255,209,102,.3);text-align:center}
+.odai-label{font-size:.7rem;color:var(--accent2);letter-spacing:.15em;margin-bottom:8px;font-weight:700}
+.odai-text{font-size:1.1rem;font-weight:700;line-height:1.5}
+/* メッセージ */
+.msg-target-box{width:100%;padding:20px;border-radius:16px;background:rgba(72,149,239,.08);border:1.5px solid rgba(72,149,239,.3);text-align:center;margin-bottom:14px}
+.msg-target-label{font-size:.7rem;color:var(--blue);letter-spacing:.15em;margin-bottom:8px;font-weight:700}
+.msg-target-num{font-size:2.5rem;font-weight:900;font-family:'Kaisei Opti',serif;color:var(--accent2)}
+.msg-target-sub{font-size:.85rem;color:var(--sub);margin-top:4px}
+.msg-textarea{width:100%;background:var(--surface2);border:1.5px solid var(--border);border-radius:14px;padding:14px;color:var(--text);font-family:'Zen Kaku Gothic New',sans-serif;font-size:1rem;resize:none;min-height:100px;outline:none;transition:border-color .2s}
+.msg-textarea:focus{border-color:var(--blue)}
+.msg-textarea::placeholder{color:var(--sub)}
+.msg-send-btn{width:100%;padding:16px;border-radius:14px;border:none;background:linear-gradient(135deg,var(--blue),#2d6fd4);color:white;font-family:'Zen Kaku Gothic New',sans-serif;font-size:1rem;font-weight:700;cursor:pointer;margin-top:12px;transition:all .2s}
+.msg-send-btn:active{transform:scale(.97)}
+.msg-send-btn:disabled{opacity:.4;cursor:default}
+.msg-received-box{width:100%;padding:20px;border-radius:16px;background:rgba(6,214,160,.08);border:1.5px solid rgba(6,214,160,.3);margin-top:14px}
+.msg-received-label{font-size:.7rem;color:var(--teal);letter-spacing:.15em;margin-bottom:10px;font-weight:700}
+.msg-received-text{font-size:1.1rem;line-height:1.7;word-break:break-all}
+.msg-received-empty{font-size:.9rem;color:var(--sub);text-align:center;padding:10px}
+/* ユーティリティ */
+.fade-in{animation:fadeIn .3s ease}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.confetti-wrap{position:fixed;inset:0;pointer-events:none;z-index:999;overflow:hidden}
+.cf{position:absolute;width:8px;height:8px;opacity:0;animation:cfFall var(--d) ease-in var(--dl) forwards}
+@keyframes cfFall{0%{opacity:1;transform:translateY(0) rotate(0deg)}100%{opacity:0;transform:translateY(100vh) rotate(720deg)}}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="header">
+    <div class="header-title">🍺 のみかい</div>
+    <div style="display:flex;align-items:center;gap:8px">
+      <span style="font-size:.72rem;color:var(--sub)" id="headerSub">接続中...</span>
+      <div class="status-dot"></div>
+    </div>
+  </header>
+  <main class="main" id="mainContent"></main>
+</div>
+<div class="confetti-wrap" id="confettiWrap"></div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+<script src="config.js"></script>
+<script>
+
+firebase.initializeApp(FIREBASE_CONFIG);
+const db = firebase.database();
+
+// ============================================================
+// 状態
+// ============================================================
+const myId = 'c_' + Math.random().toString(36).slice(2, 9);
+let myNum      = null;   // 参加者番号（1始まり）
+let currentMode = 'idle';
+let myVote     = null;
+let myBuzzed   = false;
+let msgSent    = false;
+let buzzTimerInterval = null;
+let buzzCountdown = 0;
+
+// ============================================================
+// プレゼンス（参加者番号割り当て）
+// ============================================================
+const presRef = db.ref('presence/' + myId);
+presRef.set({ joined: firebase.database.ServerValue.TIMESTAMP });
+presRef.onDisconnect().remove();
+
+// 自分の番号を取得（presenceの並び順で決定）
+db.ref('presence').on('value', snap => {
+  if (!snap.exists()) return;
+  const keys = Object.keys(snap.val()).sort();
+  const idx  = keys.indexOf(myId);
+  myNum = idx >= 0 ? idx + 1 : null;
+  const total = keys.length;
+  document.getElementById('headerSub').textContent =
+    myNum ? `参加者 ${myNum}番 / ${total}人` : `${total}人参加中`;
+});
+
+// ============================================================
+// モード監視（メイン）
+// ============================================================
+db.ref('mode').on('value', snap => {
+  const mode = snap.val() || 'idle';
+  if (mode === 'end') {
+    window.location.href = 'end.html';
+    return;
+  }
+  if (mode !== currentMode) {
+    currentMode = mode;
+    // モード切替時に個人状態リセット
+    myVote   = null;
+    myBuzzed = false;
+    msgSent  = false;
+    if (buzzTimerInterval) { clearInterval(buzzTimerInterval); buzzTimerInterval = null; }
+  }
+  render();
+});
+
+// ============================================================
+// 各データ監視
+// ============================================================
+let qState  = {};
+let gState  = {};
+let mState  = {};
+
+db.ref('question').on('value', snap => { qState = snap.val() || {}; if (currentMode === 'question') render(); });
+db.ref('game').on('value',     snap => { gState = snap.val() || {}; if (currentMode === 'game')     renderGame(); });
+db.ref('message').on('value',  snap => { mState = snap.val() || {}; if (currentMode === 'message')  render(); });
+
+// ============================================================
+// メイン描画
+// ============================================================
+function render() {
+  if      (currentMode === 'idle')     renderIdle();
+  else if (currentMode === 'question') renderQuestion();
+  else if (currentMode === 'game')     renderGame();
+  else if (currentMode === 'message')  renderMessage();
+}
+
+// ===== 待機 =====
+function renderIdle() {
+  document.getElementById('mainContent').innerHTML = `
+    <div class="waiting fade-in">
+      <div class="waiting-icon">🍺</div>
+      ${myNum ? `<div style="font-size:.85rem;color:var(--sub)">あなたの番号</div><div class="my-num">${myNum}</div>` : ''}
+      <div class="waiting-text">ホストがモードを<br>選ぶまで待ってね！</div>
+    </div>`;
+}
+
+// ===== 質問 =====
+function renderQuestion() {
+  const q     = qState;
+  const el    = document.getElementById('mainContent');
+  const round = q.round || 1;
+  const total = 3;
+
+  if (!q.active || !q.text) {
+    el.innerHTML = `<div class="waiting fade-in"><div class="waiting-icon">❓</div><div class="waiting-text">質問を読み込み中...</div></div>`;
+    return;
+  }
+
+  const votes    = q.votes || {};
+  const totalV   = Object.values(votes).reduce((s,v) => s+v, 0);
+  const answered = q.answered || 0;
+  const participants = q.participants || 1;
+  const allAnswered  = answered >= participants;
+  const showed   = myVote !== null;
+
+  // 全員回答済み or 自分が回答済みなら集計表示
+  const showResult = showed;
+
+  const choices = (q.choices || []).map((text, i) => {
+    const count = votes[i] || 0;
+    const pct   = totalV > 0 ? Math.round(count / totalV * 100) : 0;
+    const isMine = String(myVote) === String(i);
+    return `
+      <button class="choice-btn ${showResult?'voted':''} ${isMine?'selected':''}"
+        style="--pct:${pct}%"
+        onclick="castVote(${i})"
+        ${showed?'disabled':''}>
+        <span class="choice-text">${text}</span>
+        <span class="choice-meta">
+          ${showResult ? `<span class="choice-pct">${pct}%</span><span class="choice-count">${count}人</span>` : ''}
+          ${isMine ? '<span class="choice-check">✓</span>' : ''}
+        </span>
+      </button>`;
+  }).join('');
+
+  // 次へボタン：全員回答済み かつ 自分が回答済みの場合のみ表示
+  const canNext    = allAnswered && showed;
+  const myNextDone = (q.nextReady || {})[myId];
+
+  el.innerHTML = `
+    <div class="card fade-in">
+      <div class="card-label">❓ 究極の選択 (${round}/${total})</div>
+      <div class="q-progress">${answered}/${participants}人が回答済み</div>
+      <div class="card-title">${q.text}</div>
+      <div class="choices">${choices}</div>
+      ${showResult ? `<div style="font-size:.75rem;color:var(--sub);margin-top:10px;text-align:center">合計 ${totalV} 票</div>` : ''}
+      ${canNext && !myNextDone ? `<button class="next-btn" onclick="pressNext()">次の質問へ ▶</button>` : ''}
+      ${canNext && myNextDone  ? `<div style="text-align:center;color:var(--sub);font-size:.85rem;margin-top:14px">次の質問を待っています...</div>` : ''}
+      ${!allAnswered && showed ? `<div style="text-align:center;color:var(--sub);font-size:.85rem;margin-top:14px">他の人の回答を待っています...</div>` : ''}
+    </div>`;
+}
+
+window.castVote = function(i) {
+  if (myVote !== null) return;
+  myVote = i;
+  // 票数をトランザクションで加算
+  db.ref('question/votes/' + i).transaction(cur => (cur || 0) + 1);
+  // 回答者数カウント
+  db.ref('question/answered').transaction(cur => (cur || 0) + 1);
+  render();
+};
+
+window.pressNext = function() {
+  db.ref('question/nextReady/' + myId).set(true);
+};
+
+// ===== ゲーム =====
+function renderGame() {
+  const g  = gState;
+  const el = document.getElementById('mainContent');
+  if (!g || !g.status) {
+    el.innerHTML = `<div class="waiting fade-in"><div class="waiting-icon">🎮</div><div class="waiting-text">ゲームを読み込み中...</div></div>`;
+    return;
+  }
+
+  if (g.status === 'countdown') {
+    renderBuzzCountdown(el, g);
+  } else if (g.status === 'ready') {
+    renderBuzzReady(el, g);
+  } else if (g.status === 'done') {
+    renderBuzzDone(el, g);
+  } else {
+    el.innerHTML = `<div class="waiting fade-in"><div class="waiting-icon">🎮</div><div class="waiting-text">ホストがゲームを<br>開始します！</div></div>`;
+  }
+}
+
+function renderBuzzCountdown(el, g) {
+  const serverStart = g.countdownStart || Date.now();
+  const elapsed     = Math.floor((Date.now() - serverStart) / 1000);
+  let   remaining   = Math.max(0, 10 - elapsed);
+
+  const urgent = remaining <= 3;
+  el.innerHTML = `
+    <div class="card teal fade-in">
+      <div class="card-label">🔴 早押しゲーム (${g.round || 1}/2回目)</div>
+      <div class="game-area">
+        <div class="buzz-hint">10秒過ぎたら「押せ！」の合図！</div>
+        <div class="countdown-num ${urgent?'urgent':''}" id="cdNum">${remaining}</div>
+        <button class="buzz-btn" disabled>待機中...</button>
+      </div>
+    </div>`;
+
+  if (buzzTimerInterval) clearInterval(buzzTimerInterval);
+  buzzTimerInterval = setInterval(() => {
+    const el2 = document.getElementById('cdNum');
+    if (!el2) { clearInterval(buzzTimerInterval); return; }
+    const e2  = Math.floor((Date.now() - serverStart) / 1000);
+    const r2  = Math.max(0, 10 - e2);
+    el2.textContent = r2;
+    el2.className   = 'countdown-num' + (r2 <= 3 ? ' urgent' : '');
+    if (r2 <= 0) { clearInterval(buzzTimerInterval); buzzTimerInterval = null; }
+  }, 200);
+}
+
+function renderBuzzReady(el, g) {
+  if (buzzTimerInterval) { clearInterval(buzzTimerInterval); buzzTimerInterval = null; }
+  el.innerHTML = `
+    <div class="card teal fade-in">
+      <div class="card-label">🔴 早押しゲーム (${g.round || 1}/2回目)</div>
+      <div class="game-area">
+        <div class="buzz-hint" style="color:var(--accent);font-size:1.2rem;font-weight:700">今すぐ押せ！！🔥</div>
+        <button class="buzz-btn" id="buzzBtn" onclick="doBuzz()">押す！</button>
+      </div>
+    </div>`;
+}
+
+function renderBuzzDone(el, g) {
+  if (buzzTimerInterval) { clearInterval(buzzTimerInterval); buzzTimerInterval = null; }
+  const results   = g.results || {};
+  const sorted    = Object.entries(results).sort((a,b) => a[1].ts - b[1].ts);
+  const winnerId  = sorted[0]  ? sorted[0][0]  : null;
+  const loserId   = sorted[sorted.length-1] ? sorted[sorted.length-1][0] : null;
+  const isWinner  = myId === winnerId;
+  const isLast    = myId === loserId && sorted.length > 1;
+  const odai      = g.odai || '';
+  const winnerNum = getNumFromResults(winnerId, g);
+
+  el.innerHTML = `
+    <div class="card teal fade-in">
+      <div class="card-label">🔴 早押しゲーム 結果</div>
+      <div class="game-area">
+        <button class="buzz-btn ${isWinner?'winner':isLast?'loser':''}" disabled>
+          ${isWinner?'🏆':isLast?'😢':'👍'}
+        </button>
+        <div class="result-banner ${isWinner?'win':isLast?'last':'lose'}">
+          ${isWinner ? '🎉 あなたが一番乗り！' : isLast ? '😭 一番遅かった…！' : '惜しかった！'}
+        </div>
+        ${isLast && odai ? `
+          <div class="odai-box">
+            <div class="odai-label">📋 お題</div>
+            <div class="odai-text">${winnerNum}番さんへ…<br>「${odai}」</div>
+          </div>` : ''}
+        ${isWinner ? `<div class="odai-box"><div class="odai-label">📋</div><div class="odai-text">最後の人からメッセージが届くよ！</div></div>` : ''}
+      </div>
+    </div>`;
+  if (isWinner) launchConfetti();
+}
+
+function getNumFromResults(id, g) {
+  // presenceから番号取得（簡易）
+  return id ? id.slice(-3) : '?';
+}
+
+window.doBuzz = function() {
+  if (myBuzzed) return;
+  const snap_ref = db.ref('game/status');
+  snap_ref.once('value', snap => {
+    if (snap.val() !== 'ready') return;
+    myBuzzed = true;
+    db.ref('game/results/' + myId).set({ ts: firebase.database.ServerValue.TIMESTAMP, num: myNum || 0 });
+    document.getElementById('buzzBtn').disabled = true;
+  });
+};
+
+// ===== メッセージ =====
+function renderMessage() {
+  const m  = mState;
+  const el = document.getElementById('mainContent');
+  if (!m || !m.assignments) {
+    el.innerHTML = `<div class="waiting fade-in"><div class="waiting-icon">💬</div><div class="waiting-text">準備中...</div></div>`;
+    return;
+  }
+
+  const round      = m.round || 1;
+  const targetId   = (m.assignments || {})[myId];
+  const targetNum  = targetId ? getParticipantNum(targetId, m) : '?';
+  const received   = targetId ? (m.messages || {})[myId] : null; // 自分宛のメッセージ
+  const mySentMsg  = (m.messages || {})[targetId];               // 自分が送ったメッセージ（targetId宛に保存）
+
+  // 実際には「自分宛」= assignments で自分をtargetにしている人のメッセージ
+  const incomingMsg = getIncomingMessage(m);
+
+  el.innerHTML = `
+    <div class="card blue fade-in">
+      <div class="card-label">💬 匿名メッセージ (${round}/2回目)</div>
+      <div class="msg-target-box">
+        <div class="msg-target-label">メッセージを送る相手</div>
+        <div class="msg-target-num">${targetNum}番</div>
+        <div class="msg-target-sub">相手には誰からか分かりません</div>
+      </div>
+      ${!msgSent ? `
+        <textarea class="msg-textarea" id="msgInput" placeholder="${targetNum}番さんへのメッセージを入力..."></textarea>
+        <button class="msg-send-btn" onclick="sendMsg('${targetId}')">送信する ▶</button>
+      ` : `
+        <div style="text-align:center;color:var(--sub);font-size:.85rem;padding:10px">メッセージを送りました！</div>
+      `}
+    </div>
+    <div class="card blue fade-in">
+      <div class="card-label">📩 届いたメッセージ</div>
+      ${incomingMsg
+        ? `<div class="msg-received-box"><div class="msg-received-label">匿名より</div><div class="msg-received-text">${escHtml(incomingMsg)}</div></div>`
+        : `<div class="msg-received-empty">まだ届いていません...</div>`}
+    </div>`;
+}
+
+function getParticipantNum(id, m) {
+  const nums = m.nums || {};
+  return nums[id] || id.slice(-3);
+}
+
+function getIncomingMessage(m) {
+  // assignments: { senderId: targetId }
+  // 自分(myId)をtargetにしているsenderを探す
+  const assignments = m.assignments || {};
+  const messages    = m.messages    || {};
+  const senderEntry = Object.entries(assignments).find(([sender, target]) => target === myId);
+  if (!senderEntry) return null;
+  return messages[senderEntry[0]] || null;
+}
+
+window.sendMsg = function(targetId) {
+  const input = document.getElementById('msgInput');
+  const text  = input ? input.value.trim() : '';
+  if (!text) return;
+  msgSent = true;
+  db.ref('message/messages/' + myId).set(text);
+  render();
+};
+
+// ============================================================
+// ユーティリティ
+// ============================================================
+function escHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function launchConfetti() {
+  const wrap = document.getElementById('confettiWrap');
+  const cols = ['#ff6b35','#ffd166','#06d6a0','#4895ef','#ff9ff3','#fff'];
+  wrap.innerHTML = '';
+  for (let i = 0; i < 40; i++) {
+    const el = document.createElement('div'); el.className = 'cf';
+    el.style.cssText = `left:${Math.random()*100}%;top:-10px;background:${cols[i%cols.length]};border-radius:${Math.random()>.5?'50%':'3px'};width:${6+Math.random()*8}px;height:${6+Math.random()*8}px;--d:${1.2+Math.random()*1.2}s;--dl:${Math.random()*.4}s`;
+    wrap.appendChild(el);
+  }
+  setTimeout(() => { wrap.innerHTML = ''; }, 2500);
+}
+</script>
+</body>
+</html>
