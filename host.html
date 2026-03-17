@@ -8,322 +8,106 @@
 @import url('https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;700;900&family=Kaisei+Opti:wght@400;700&display=swap');
 
 :root {
-  --bg: #0a0a14;
-  --surface: #141428;
-  --surface2: #1e1e38;
-  --accent: #ff6b35;
-  --accent2: #ffd166;
-  --teal: #06d6a0;
-  --blue: #4895ef;
-  --purple: #a78bfa;
-  --text: #f0eaff;
-  --sub: #8880aa;
-  --border: rgba(255,255,255,0.08);
-  --red: #ef476f;
-  --green: #06d6a0;
+  --bg: #0a0a14; --surface: #141428; --surface2: #1e1e38;
+  --accent: #ff6b35; --accent2: #ffd166; --teal: #06d6a0;
+  --blue: #4895ef; --purple: #a78bfa; --text: #f0eaff;
+  --sub: #8880aa; --border: rgba(255,255,255,0.08); --red: #ef476f;
 }
-
 * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
-
-body {
-  background: var(--bg);
-  font-family: 'Zen Kaku Gothic New', sans-serif;
-  color: var(--text);
-  min-height: 100svh;
-  padding-bottom: 40px;
-}
-
+body { background: var(--bg); font-family: 'Zen Kaku Gothic New', sans-serif; color: var(--text); min-height: 100svh; padding-bottom: 40px; }
 body::before {
-  content: '';
-  position: fixed;
-  inset: 0;
-  background:
-    radial-gradient(ellipse 60% 40% at 20% 10%, rgba(167,139,250,0.1) 0%, transparent 50%),
-    radial-gradient(ellipse 50% 30% at 80% 80%, rgba(255,107,53,0.08) 0%, transparent 50%);
+  content: ''; position: fixed; inset: 0;
+  background: radial-gradient(ellipse 60% 40% at 20% 10%,rgba(167,139,250,0.1) 0%,transparent 50%),
+              radial-gradient(ellipse 50% 30% at 80% 80%,rgba(255,107,53,0.08) 0%,transparent 50%);
   pointer-events: none;
 }
-
 .app { max-width: 520px; margin: 0 auto; padding: 0 16px; }
 
-/* ヘッダー */
-.header {
-  padding: 20px 0 16px;
-  border-bottom: 1px solid var(--border);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 20px;
-}
-.header-title {
-  font-family: 'Kaisei Opti', serif;
-  font-size: 1.2rem;
-  font-weight: 700;
-  color: var(--purple);
-}
-.participant-badge {
-  background: var(--surface2);
-  border: 1px solid var(--border);
-  border-radius: 100px;
-  padding: 5px 14px;
-  font-size: 0.8rem;
-  color: var(--teal);
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
+.header { padding: 20px 0 16px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+.header-title { font-family: 'Kaisei Opti', serif; font-size: 1.2rem; font-weight: 700; color: var(--purple); }
+.participant-badge { background: var(--surface2); border: 1px solid var(--border); border-radius: 100px; padding: 5px 14px; font-size: 0.8rem; color: var(--teal); display: flex; align-items: center; gap: 6px; }
 .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--teal); box-shadow: 0 0 6px var(--teal); animation: pulse 2s infinite; }
 @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
 
-/* セクション */
-.section {
-  margin-bottom: 24px;
-}
-.section-title {
-  font-size: 0.65rem;
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
-  font-weight: 900;
-  color: var(--sub);
-  margin-bottom: 12px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-.section-title::after {
-  content: '';
-  flex: 1;
-  height: 1px;
-  background: var(--border);
-}
+.section { margin-bottom: 24px; }
+.section-title { font-size: 0.65rem; letter-spacing: 0.2em; text-transform: uppercase; font-weight: 900; color: var(--sub); margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+.section-title::after { content: ''; flex: 1; height: 1px; background: var(--border); }
 
-/* カード */
-.card {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 18px;
-  padding: 18px;
-  margin-bottom: 12px;
-  position: relative;
-  overflow: hidden;
-}
-.card-accent {
-  position: absolute;
-  top: 0; left: 0; right: 0;
-  height: 2px;
-}
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: 18px; padding: 18px; margin-bottom: 12px; position: relative; overflow: hidden; }
+.card-accent { position: absolute; top: 0; left: 0; right: 0; height: 2px; }
 .card-accent.orange { background: linear-gradient(90deg, var(--accent), var(--accent2)); }
 .card-accent.teal   { background: linear-gradient(90deg, var(--teal), var(--blue)); }
 .card-accent.purple { background: linear-gradient(90deg, var(--purple), var(--blue)); }
 
-/* ボタン共通 */
-.btn {
-  padding: 12px 20px;
-  border-radius: 12px;
-  border: none;
-  font-family: 'Zen Kaku Gothic New', sans-serif;
-  font-size: 0.9rem;
-  font-weight: 700;
-  cursor: pointer;
-  transition: all 0.2s;
-}
+.btn { padding: 12px 20px; border-radius: 12px; border: none; font-family: 'Zen Kaku Gothic New', sans-serif; font-size: 0.9rem; font-weight: 700; cursor: pointer; transition: all 0.2s; }
 .btn:active { transform: scale(0.96); }
 .btn:disabled { opacity: 0.4; cursor: default; transform: none; }
-
-.btn-primary { background: linear-gradient(135deg, var(--accent), #e05520); color: white; }
-.btn-teal    { background: linear-gradient(135deg, var(--teal), #04a87e); color: #0a2a20; font-weight: 900; }
-.btn-blue    { background: linear-gradient(135deg, var(--blue), #2d6fd4); color: white; }
-.btn-purple  { background: linear-gradient(135deg, var(--purple), #7c5fe6); color: white; }
+.btn-primary { background: linear-gradient(135deg,var(--accent),#e05520); color: white; }
+.btn-teal    { background: linear-gradient(135deg,var(--teal),#04a87e); color: #0a2a20; font-weight: 900; }
+.btn-blue    { background: linear-gradient(135deg,var(--blue),#2d6fd4); color: white; }
 .btn-ghost   { background: transparent; border: 1.5px solid var(--border); color: var(--sub); }
-.btn-danger  { background: linear-gradient(135deg, var(--red), #c0235e); color: white; }
+.btn-danger  { background: linear-gradient(135deg,var(--red),#c0235e); color: white; }
 .btn-full    { width: 100%; }
 .btn-sm      { padding: 8px 14px; font-size: 0.8rem; }
 .btn-row     { display: flex; gap: 10px; flex-wrap: wrap; }
 
-/* 質問セレクター */
-.q-list {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  max-height: 280px;
-  overflow-y: auto;
-  margin-bottom: 14px;
-  padding-right: 2px;
-}
-.q-item {
-  padding: 12px 14px;
-  border-radius: 12px;
-  border: 1.5px solid var(--border);
-  background: var(--surface2);
-  cursor: pointer;
-  transition: all 0.2s;
-  font-size: 0.9rem;
-  line-height: 1.5;
-}
-.q-item:hover { border-color: var(--accent); background: rgba(255,107,53,0.08); }
+.q-list { display: flex; flex-direction: column; gap: 8px; max-height: 280px; overflow-y: auto; margin-bottom: 14px; }
+.q-item { padding: 12px 14px; border-radius: 12px; border: 1.5px solid var(--border); background: var(--surface2); cursor: pointer; transition: all 0.2s; font-size: 0.9rem; line-height: 1.5; }
+.q-item:hover  { border-color: var(--accent); background: rgba(255,107,53,0.08); }
 .q-item.active { border-color: var(--accent); background: rgba(255,107,53,0.12); color: var(--accent2); font-weight: 700; }
-.q-choices {
-  font-size: 0.75rem;
-  color: var(--sub);
-  margin-top: 4px;
-}
+.q-choices { font-size: 0.75rem; color: var(--sub); margin-top: 4px; }
 
-/* 投票結果バー */
-.result-bars {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin-top: 14px;
-}
-.result-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font-size: 0.85rem;
-}
-.result-label { min-width: 80px; color: var(--text); }
-.result-bar-bg {
-  flex: 1;
-  height: 12px;
-  background: var(--surface2);
-  border-radius: 100px;
-  overflow: hidden;
-}
-.result-bar-fill {
-  height: 100%;
-  background: linear-gradient(90deg, var(--accent), var(--accent2));
-  border-radius: 100px;
-  transition: width 0.6s ease;
-}
-.result-num { min-width: 48px; text-align: right; color: var(--sub); font-size: 0.8rem; }
+.result-bars { display: flex; flex-direction: column; gap: 8px; margin-top: 14px; }
+.result-row { display: flex; align-items: center; gap: 10px; font-size: 0.85rem; }
+.result-label { min-width: 80px; }
+.result-bar-bg { flex: 1; height: 12px; background: var(--surface2); border-radius: 100px; overflow: hidden; }
+.result-bar-fill { height: 100%; background: linear-gradient(90deg,var(--accent),var(--accent2)); border-radius: 100px; transition: width 0.6s ease; }
+.result-num { min-width: 60px; text-align: right; color: var(--sub); font-size: 0.8rem; }
 
-/* ゲームステータス */
-.game-status-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 5px 12px;
-  border-radius: 100px;
-  font-size: 0.75rem;
-  font-weight: 700;
-  margin-bottom: 14px;
-}
+.game-status-badge { display: inline-flex; align-items: center; gap: 6px; padding: 5px 12px; border-radius: 100px; font-size: 0.75rem; font-weight: 700; margin-bottom: 14px; }
 .badge-idle    { background: rgba(255,255,255,0.06); color: var(--sub); }
 .badge-waiting { background: rgba(255,209,102,0.15); color: var(--accent2); border: 1px solid rgba(255,209,102,0.3); }
 .badge-ready   { background: rgba(6,214,160,0.15); color: var(--teal); border: 1px solid rgba(6,214,160,0.3); }
 .badge-done    { background: rgba(72,149,239,0.15); color: var(--blue); border: 1px solid rgba(72,149,239,0.3); }
 
-/* タイミング結果リスト */
-.timing-results {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  margin-top: 12px;
-  max-height: 200px;
-  overflow-y: auto;
-}
-.timing-result-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 8px 12px;
-  background: var(--surface2);
-  border-radius: 10px;
-  font-size: 0.85rem;
-}
+.timing-results { display: flex; flex-direction: column; gap: 6px; margin-top: 12px; max-height: 200px; overflow-y: auto; }
+.timing-result-row { display: flex; align-items: center; justify-content: space-between; padding: 8px 12px; background: var(--surface2); border-radius: 10px; font-size: 0.85rem; }
 
-/* メッセージ */
-.host-msg-list {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  max-height: 300px;
-  overflow-y: auto;
-}
-.host-msg-item {
-  padding: 10px 14px;
-  background: var(--surface2);
-  border-radius: 12px;
-  font-size: 0.9rem;
-  line-height: 1.6;
-  border: 1px solid var(--border);
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 8px;
-}
+.host-msg-list { display: flex; flex-direction: column; gap: 8px; max-height: 300px; overflow-y: auto; }
+.host-msg-item { padding: 10px 14px; background: var(--surface2); border-radius: 12px; font-size: 0.9rem; line-height: 1.6; border: 1px solid var(--border); display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
 .host-msg-time { font-size: 0.7rem; color: var(--sub); white-space: nowrap; margin-top: 2px; }
 
-/* ステータスパネル */
-.status-panel {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 18px;
-  padding: 16px;
-  display: flex;
-  gap: 16px;
-  margin-bottom: 24px;
-  flex-wrap: wrap;
-}
-.stat-item { flex: 1; min-width: 80px; text-align: center; }
-.stat-num  { font-size: 1.8rem; font-weight: 900; font-family: 'Kaisei Opti', serif; line-height: 1; }
+.status-panel { background: var(--surface); border: 1px solid var(--border); border-radius: 18px; padding: 16px; display: flex; gap: 16px; margin-bottom: 24px; }
+.stat-item { flex: 1; text-align: center; }
+.stat-num { font-size: 1.8rem; font-weight: 900; font-family: 'Kaisei Opti', serif; line-height: 1; }
 .stat-label { font-size: 0.65rem; color: var(--sub); margin-top: 4px; letter-spacing: 0.1em; }
 
-/* ホスト参加バナー */
-.host-join-banner {
-  background: linear-gradient(135deg, rgba(167,139,250,0.1), rgba(72,149,239,0.1));
-  border: 1px solid rgba(167,139,250,0.3);
-  border-radius: 14px;
-  padding: 12px 16px;
-  font-size: 0.85rem;
-  color: var(--purple);
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 20px;
-}
-
-.hidden { display: none !important; }
+.host-join-banner { background: linear-gradient(135deg,rgba(167,139,250,0.1),rgba(72,149,239,0.1)); border: 1px solid rgba(167,139,250,0.3); border-radius: 14px; padding: 12px 16px; font-size: 0.85rem; color: var(--purple); display: flex; align-items: center; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
 </style>
 </head>
 <body>
 <div class="app">
-
   <header class="header">
     <div class="header-title">🎛️ ホスト管理画面</div>
-    <div class="participant-badge">
-      <div class="dot"></div>
-      <span id="participantCount">0人</span>
-    </div>
+    <div class="participant-badge"><div class="dot"></div><span id="participantCount">0人</span></div>
   </header>
 
-  <!-- ホスト参加案内 -->
   <div class="host-join-banner">
-    🙋 あなたもプレイヤーとして参加できます →
+    🙋 ホストも参加者として参加できます →
     <a href="index.html" target="_blank" style="color:var(--accent2);font-weight:700;text-decoration:none;">参加者画面を開く ↗</a>
   </div>
 
-  <!-- ステータス -->
   <div class="status-panel">
-    <div class="stat-item">
-      <div class="stat-num" id="statParticipants" style="color:var(--teal)">0</div>
-      <div class="stat-label">ONLINE</div>
-    </div>
-    <div class="stat-item">
-      <div class="stat-num" id="statVotes" style="color:var(--accent2)">0</div>
-      <div class="stat-label">VOTES</div>
-    </div>
-    <div class="stat-item">
-      <div class="stat-num" id="statMessages" style="color:var(--blue)">0</div>
-      <div class="stat-label">MSGS</div>
-    </div>
+    <div class="stat-item"><div class="stat-num" id="statParticipants" style="color:var(--teal)">0</div><div class="stat-label">ONLINE</div></div>
+    <div class="stat-item"><div class="stat-num" id="statVotes" style="color:var(--accent2)">0</div><div class="stat-label">VOTES</div></div>
+    <div class="stat-item"><div class="stat-num" id="statMessages" style="color:var(--blue)">0</div><div class="stat-label">MSGS</div></div>
   </div>
 
-  <!-- 質問ゲーム -->
   <div class="section">
     <div class="section-title">❓ 質問ゲーム</div>
     <div class="card">
       <div class="card-accent orange"></div>
-      <div class="q-list" id="qList"><!-- JS で描画 --></div>
+      <div class="q-list" id="qList"></div>
       <div class="btn-row">
         <button class="btn btn-primary" onclick="publishQuestion()">▶ この質問を公開</button>
         <button class="btn btn-ghost btn-sm" onclick="resetQuestion()">リセット</button>
@@ -332,11 +116,8 @@ body::before {
     </div>
   </div>
 
-  <!-- ゲーム -->
   <div class="section">
     <div class="section-title">🎮 ゲーム</div>
-
-    <!-- 早押し -->
     <div class="card">
       <div class="card-accent teal"></div>
       <div style="font-weight:700;margin-bottom:12px;">🔴 早押しゲーム</div>
@@ -346,15 +127,13 @@ body::before {
         <button class="btn btn-teal" id="buzzStartBtn" onclick="buzzStart()" disabled>今すぐ開始！</button>
         <button class="btn btn-ghost btn-sm" onclick="resetBuzz()">リセット</button>
       </div>
-      <div id="buzzWinnerArea" class="hidden" style="margin-top:12px;padding:12px;background:rgba(6,214,160,0.1);border:1px solid rgba(6,214,160,0.3);border-radius:12px;font-size:0.9rem;color:var(--teal);">
+      <div id="buzzWinnerArea" style="display:none;margin-top:12px;padding:12px;background:rgba(6,214,160,0.1);border:1px solid rgba(6,214,160,0.3);border-radius:12px;font-size:0.9rem;color:var(--teal);">
         🏆 勝者が決まりました！
       </div>
     </div>
-
-    <!-- タイミング -->
     <div class="card">
       <div class="card-accent purple"></div>
-      <div style="font-weight:700;margin-bottom:12px;">⏱ タイミングゲーム</div>
+      <div style="font-weight:700;margin-bottom:8px;">⏱ タイミングゲーム</div>
       <div style="font-size:0.8rem;color:var(--sub);margin-bottom:12px;">バーが中央に来たタイミングでタップ！スコアで競う</div>
       <div class="game-status-badge badge-idle" id="timingStatusBadge">● 待機中</div>
       <div class="btn-row">
@@ -366,7 +145,6 @@ body::before {
     </div>
   </div>
 
-  <!-- メッセージ -->
   <div class="section">
     <div class="section-title">💬 匿名メッセージ</div>
     <div class="card">
@@ -380,63 +158,51 @@ body::before {
       </div>
     </div>
   </div>
-
 </div>
 
-<!-- Firebase SDK -->
-<script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getDatabase, ref, onValue, set, push, remove, update, serverTimestamp, get }
-  from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
-
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+<script>
 // ============================================================
-// 🔧 設定（index.html と同じ内容に書き換えてください）
+// 🔧 ここだけ書き換えてください（index.html と同じ内容）
 // ============================================================
-const firebaseConfig = {
-  apiKey: "AIzaSyDvSq393Gr4jee-DJRRf4JQxN5B8iXy4Fk",
-  authDomain: "nomikai-50206.firebaseapp.com",
-  databaseURL: "https://nomikai-50206-default-rtdb.firebaseio.com",
-  projectId: "nomikai-50206",
-  storageBucket: "nomikai-50206.firebasestorage.app",
-  messagingSenderId: "779735081390",
-  appId: "1:779735081390:web:04a6d90b4576e92d1e683f"
+const FIREBASE_CONFIG = {
+  apiKey:            "YOUR_API_KEY",
+  authDomain:        "YOUR_PROJECT_ID.firebaseapp.com",
+  databaseURL:       "https://YOUR_PROJECT_ID-default-rtdb.firebaseio.com",
+  projectId:         "YOUR_PROJECT_ID",
+  storageBucket:     "YOUR_PROJECT_ID.appspot.com",
+  messagingSenderId: "YOUR_SENDER_ID",
+  appId:             "YOUR_APP_ID"
 };
 
-const app = initializeApp(FIREBASE_CONFIG);
-const db  = getDatabase(app);
+firebase.initializeApp(FIREBASE_CONFIG);
+const db = firebase.database();
 
-// ============================================================
-// 質問データ
-// ============================================================
 const QUESTIONS = [
-  { text: '子どもの頃の将来の夢は？', choices: ['スポーツ選手', '芸能人・アーティスト', '普通のサラリーマン', 'その他'] },
-  { text: '休日の過ごし方といえば？', choices: ['外出・アクティブ派', '家でゴロゴロ', 'どっちでもOK', '仕事してる'] },
-  { text: 'テンパったとき、あなたは？', choices: ['静かになる', 'うるさくなる', 'とりあえず笑う', '泣く'] },
-  { text: '飲み会で頼む飲み物は？', choices: ['ビール一択', 'チューハイ・サワー', 'カクテル系', 'ソフトドリンク'] },
-  { text: '自分のキャラはどっち？', choices: ['いじられ役', 'いじる役', 'どっちでもない', 'ムードメーカー'] },
-  { text: '仕事で大事にしていること', choices: ['スピード', '正確さ', 'チームワーク', 'とにかく楽しむ'] },
-  { text: '朝に強い？弱い？', choices: ['超朝型', 'わりと早起き', 'どっちでもない', '完全に夜型'] },
-  { text: 'ストレス発散方法は？', choices: ['食べる', '寝る', '運動', '誰かと話す'] },
-  { text: '自分を動物に例えると？', choices: ['犬（忠実・陽気）', '猫（マイペース）', '熊（のんびり）', '鷹（独立心強め）'] },
-  { text: 'この職場の雰囲気は？', choices: ['アットホーム', 'テキパキ仕事重視', 'ゆるくて好き', 'もっと変えたい'] },
+  { text: '子どもの頃の将来の夢は？',       choices: ['スポーツ選手', '芸能人・アーティスト', '普通のサラリーマン', 'その他'] },
+  { text: '休日の過ごし方といえば？',       choices: ['外出・アクティブ派', '家でゴロゴロ', 'どっちでもOK', '仕事してる'] },
+  { text: 'テンパったとき、あなたは？',     choices: ['静かになる', 'うるさくなる', 'とりあえず笑う', '泣く'] },
+  { text: '飲み会で頼む飲み物は？',         choices: ['ビール一択', 'チューハイ・サワー', 'カクテル系', 'ソフトドリンク'] },
+  { text: '自分のキャラはどっち？',         choices: ['いじられ役', 'いじる役', 'どっちでもない', 'ムードメーカー'] },
+  { text: '仕事で大事にしていること',       choices: ['スピード', '正確さ', 'チームワーク', 'とにかく楽しむ'] },
+  { text: '朝に強い？弱い？',               choices: ['超朝型', 'わりと早起き', 'どっちでもない', '完全に夜型'] },
+  { text: 'ストレス発散方法は？',           choices: ['食べる', '寝る', '運動', '誰かと話す'] },
+  { text: '自分を動物に例えると？',         choices: ['犬（忠実・陽気）', '猫（マイペース）', '熊（のんびり）', '鷹（独立心強め）'] },
+  { text: 'この職場の雰囲気は？',           choices: ['アットホーム', 'テキパキ仕事重視', 'ゆるくて好き', 'もっと変えたい'] },
 ];
 
 let selectedQIndex = 0;
 let messages = [];
-let timingResults = {};
 
-// ============================================================
-// Firebase リスナー
-// ============================================================
-// 参加者数
-onValue(ref(db, 'presence'), snap => {
-  const count = snap.exists() ? Object.keys(snap.val()).length : 0;
-  document.getElementById('participantCount').textContent = `${count}人`;
-  document.getElementById('statParticipants').textContent = count;
+// リスナー
+db.ref('presence').on('value', snap => {
+  const n = snap.exists() ? Object.keys(snap.val()).length : 0;
+  document.getElementById('participantCount').textContent = n + '人';
+  document.getElementById('statParticipants').textContent = n;
 });
 
-// 質問の票
-onValue(ref(db, 'question'), snap => {
+db.ref('question').on('value', snap => {
   const q = snap.val() || {};
   const votes = q.votes || {};
   const total = Object.values(votes).reduce((s,v) => s+v, 0);
@@ -444,56 +210,37 @@ onValue(ref(db, 'question'), snap => {
   renderResultBars(q);
 });
 
-// ゲーム
-onValue(ref(db, 'game'), snap => {
+db.ref('game').on('value', snap => {
   const g = snap.val() || {};
   updateBuzzUI(g);
   updateTimingUI(g);
 });
 
-// メッセージ
-onValue(ref(db, 'messages'), snap => {
+db.ref('messages').on('value', snap => {
   messages = [];
-  if (snap.exists()) {
-    snap.forEach(c => messages.push({ id: c.key, ...c.val() }));
-    messages.sort((a,b) => (b.ts||0) - (a.ts||0));
-  }
+  if (snap.exists()) snap.forEach(c => messages.push({ id: c.key, ...c.val() }));
+  messages.sort((a,b) => (b.ts||0) - (a.ts||0));
   document.getElementById('statMessages').textContent = messages.length;
   renderHostMessages();
 });
 
-// ============================================================
-// 質問ゲーム
-// ============================================================
+// ===== 質問 =====
 function renderQList() {
-  const el = document.getElementById('qList');
-  el.innerHTML = QUESTIONS.map((q, i) => `
-    <div class="q-item ${i === selectedQIndex ? 'active' : ''}" onclick="selectQ(${i})">
+  document.getElementById('qList').innerHTML = QUESTIONS.map((q, i) => `
+    <div class="q-item ${i===selectedQIndex?'active':''}" onclick="selectQ(${i})">
       ${q.text}
       <div class="q-choices">${q.choices.join(' / ')}</div>
     </div>`).join('');
 }
-
-window.selectQ = function(i) {
-  selectedQIndex = i;
-  renderQList();
-}
-
-window.publishQuestion = async function() {
+function selectQ(i) { selectedQIndex = i; renderQList(); }
+function publishQuestion() {
   const q = QUESTIONS[selectedQIndex];
-  await set(ref(db, 'question'), {
-    active: true,
-    text: q.text,
-    choices: q.choices,
-    votes: {}
-  });
+  db.ref('question').set({ active: true, text: q.text, choices: q.choices, votes: {} });
 }
-
-window.resetQuestion = async function() {
-  await set(ref(db, 'question'), { active: false });
+function resetQuestion() {
+  db.ref('question').set({ active: false });
   document.getElementById('resultBars').innerHTML = '';
 }
-
 function renderResultBars(q) {
   const el = document.getElementById('resultBars');
   if (!q.active || !q.choices) { el.innerHTML = ''; return; }
@@ -510,118 +257,65 @@ function renderResultBars(q) {
   }).join('');
 }
 
-// ============================================================
-// 早押しゲーム
-// ============================================================
+// ===== 早押し =====
 function updateBuzzUI(g) {
-  const badge   = document.getElementById('buzzStatusBadge');
-  const prepBtn = document.getElementById('buzzPrepBtn');
-  const startBtn= document.getElementById('buzzStartBtn');
-  const winArea = document.getElementById('buzzWinnerArea');
-
+  const badge    = document.getElementById('buzzStatusBadge');
+  const prepBtn  = document.getElementById('buzzPrepBtn');
+  const startBtn = document.getElementById('buzzStartBtn');
+  const winArea  = document.getElementById('buzzWinnerArea');
   if (!g.type || g.type !== 'buzz') {
-    badge.className = 'game-status-badge badge-idle';
-    badge.textContent = '● 待機中';
-    prepBtn.disabled  = false;
-    startBtn.disabled = true;
-    winArea.classList.add('hidden');
-    return;
-  }
-  if (g.status === 'waiting') {
-    badge.className = 'game-status-badge badge-waiting';
-    badge.textContent = '⏳ 参加者に予告中';
-    prepBtn.disabled  = true;
-    startBtn.disabled = false;
-    winArea.classList.add('hidden');
+    badge.className = 'game-status-badge badge-idle'; badge.textContent = '● 待機中';
+    prepBtn.disabled = false; startBtn.disabled = true; winArea.style.display = 'none';
+  } else if (g.status === 'waiting') {
+    badge.className = 'game-status-badge badge-waiting'; badge.textContent = '⏳ 参加者に予告中';
+    prepBtn.disabled = true; startBtn.disabled = false; winArea.style.display = 'none';
   } else if (g.status === 'ready') {
-    badge.className = 'game-status-badge badge-ready';
-    badge.textContent = '🔴 早押し受付中！';
-    prepBtn.disabled  = true;
-    startBtn.disabled = true;
-    winArea.classList.add('hidden');
+    badge.className = 'game-status-badge badge-ready'; badge.textContent = '🔴 早押し受付中！';
+    prepBtn.disabled = true; startBtn.disabled = true; winArea.style.display = 'none';
   } else if (g.status === 'done') {
-    badge.className = 'game-status-badge badge-done';
-    badge.textContent = '✅ 終了';
-    prepBtn.disabled  = true;
-    startBtn.disabled = true;
-    winArea.classList.remove('hidden');
+    badge.className = 'game-status-badge badge-done'; badge.textContent = '✅ 終了';
+    prepBtn.disabled = true; startBtn.disabled = true; winArea.style.display = 'block';
   }
 }
+function buzzPrepare() { db.ref('game').set({ type: 'buzz', status: 'waiting' }); }
+function buzzStart()   { db.ref('game/status').set('ready'); }
+function resetBuzz()   { db.ref('game').set({ type: 'idle' }); }
 
-window.buzzPrepare = async function() {
-  await set(ref(db, 'game'), { type: 'buzz', status: 'waiting' });
-}
-window.buzzStart = async function() {
-  await set(ref(db, 'game/status'), 'ready');
-}
-window.resetBuzz = async function() {
-  await set(ref(db, 'game'), { type: 'idle' });
-}
-
-// ============================================================
-// タイミングゲーム
-// ============================================================
+// ===== タイミング =====
 function updateTimingUI(g) {
-  const badge   = document.getElementById('timingStatusBadge');
-  const prepBtn = document.getElementById('timingPrepBtn');
-  const startBtn= document.getElementById('timingStartBtn');
-  const resEl   = document.getElementById('timingResults');
-
+  const badge    = document.getElementById('timingStatusBadge');
+  const prepBtn  = document.getElementById('timingPrepBtn');
+  const startBtn = document.getElementById('timingStartBtn');
+  const resEl    = document.getElementById('timingResults');
   if (!g.type || g.type !== 'timing') {
-    badge.className = 'game-status-badge badge-idle';
-    badge.textContent = '● 待機中';
-    prepBtn.disabled  = false;
-    startBtn.disabled = true;
-    resEl.innerHTML   = '';
-    return;
-  }
-  if (g.status === 'waiting') {
-    badge.className = 'game-status-badge badge-waiting';
-    badge.textContent = '⏳ 参加者に予告中';
-    prepBtn.disabled  = true;
-    startBtn.disabled = false;
-    resEl.innerHTML   = '';
+    badge.className = 'game-status-badge badge-idle'; badge.textContent = '● 待機中';
+    prepBtn.disabled = false; startBtn.disabled = true; resEl.innerHTML = '';
+  } else if (g.status === 'waiting') {
+    badge.className = 'game-status-badge badge-waiting'; badge.textContent = '⏳ 参加者に予告中';
+    prepBtn.disabled = true; startBtn.disabled = false; resEl.innerHTML = '';
   } else if (g.status === 'ready') {
-    badge.className = 'game-status-badge badge-ready';
-    badge.textContent = '▶ プレイ中';
-    prepBtn.disabled  = true;
-    startBtn.disabled = true;
+    badge.className = 'game-status-badge badge-ready'; badge.textContent = '▶ プレイ中';
+    prepBtn.disabled = true; startBtn.disabled = true;
   } else if (g.status === 'done') {
-    badge.className = 'game-status-badge badge-done';
-    badge.textContent = '✅ 終了';
-    // 結果表示
-    const results = Object.entries(g.results || {})
-      .sort((a,b) => (b[1].score||0) - (a[1].score||0));
+    badge.className = 'game-status-badge badge-done'; badge.textContent = '✅ 終了';
+    const results = Object.entries(g.results || {}).sort((a,b)=>(b[1].score||0)-(a[1].score||0));
     resEl.innerHTML = results.length === 0
       ? '<div style="color:var(--sub);font-size:0.8rem;text-align:center;">回答者なし</div>'
-      : results.map(([id, r], i) => `
-          <div class="timing-result-row">
-            <span>${i+1}位: 参加者${id.slice(-4)}</span>
-            <span style="color:var(--accent2);font-weight:700">${r.score}点</span>
-          </div>`).join('');
+      : results.map(([id,r],i) => `<div class="timing-result-row"><span>${i+1}位: 参加者${id.slice(-4)}</span><span style="color:var(--accent2);font-weight:700">${r.score}点</span></div>`).join('');
   }
 }
-
-window.timingPrepare = async function() {
-  await set(ref(db, 'game'), { type: 'timing', status: 'waiting' });
-}
-window.timingStart = async function() {
-  await update(ref(db, 'game'), { status: 'ready', results: {} });
-  // 10秒後に自動終了
-  setTimeout(async () => {
-    const snap = await get(ref(db, 'game/status'));
-    if (snap.val() === 'ready') {
-      await set(ref(db, 'game/status'), 'done');
-    }
+function timingPrepare() { db.ref('game').set({ type: 'timing', status: 'waiting' }); }
+function timingStart() {
+  db.ref('game').update({ status: 'ready', results: {} });
+  setTimeout(() => {
+    db.ref('game/status').once('value', snap => {
+      if (snap.val() === 'ready') db.ref('game/status').set('done');
+    });
   }, 12000);
 }
-window.resetTiming = async function() {
-  await set(ref(db, 'game'), { type: 'idle' });
-}
+function resetTiming() { db.ref('game').set({ type: 'idle' }); }
 
-// ============================================================
-// メッセージ
-// ============================================================
+// ===== メッセージ =====
 function renderHostMessages() {
   const el = document.getElementById('hostMsgList');
   if (messages.length === 0) {
@@ -629,7 +323,7 @@ function renderHostMessages() {
     return;
   }
   el.innerHTML = messages.map(m => {
-    const t = m.ts ? new Date(m.ts).toLocaleTimeString('ja-JP', { hour:'2-digit', minute:'2-digit' }) : '';
+    const t = m.ts ? new Date(m.ts).toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'}) : '';
     return `<div class="host-msg-item">
       <span>${escHtml(m.text)}</span>
       <div>
@@ -639,23 +333,14 @@ function renderHostMessages() {
     </div>`;
   }).join('');
 }
-
-window.deleteMessage = async function(id) {
-  await remove(ref(db, `messages/${id}`));
-}
-window.clearMessages = async function() {
+function deleteMessage(id) { db.ref('messages/' + id).remove(); }
+function clearMessages() {
   if (!confirm('全メッセージを削除しますか？')) return;
-  await remove(ref(db, 'messages'));
+  db.ref('messages').remove();
 }
 
-// ============================================================
-// ユーティリティ
-// ============================================================
-function escHtml(s) {
-  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-}
+function escHtml(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
-// 初期描画
 renderQList();
 </script>
 </body>
