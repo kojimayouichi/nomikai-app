@@ -410,12 +410,6 @@ function finalizeBuzzRound() {
     });
     const odai = ODAI[Math.floor(Math.random() * ODAI.length)];
     db.ref('game').update({ status: 'done', odai, sortedResults: sorted.map(([id]) => id) });
-
-    // 8秒後に次ラウンドへ
-    setTimeout(() => {
-      if (gRound < 2) startBuzzRound();
-      else finishGame();
-    }, 8000);
   });
 }
 
@@ -437,21 +431,31 @@ function updateGUI(g) {
       badge.className   = 'mode-badge mb-active';
       badge.textContent = `⏳ カウントダウン中 (${g.round || 1}/2)`;
     } else if (g.status === 'ready') {
-      badge.className   = 'mode-badge mb-active';
-      badge.textContent = `🔴 早押し受付中 (${g.round || 1}/2)`;
-      // ホストが手動でdoneにするボタン
-      resEl.innerHTML   = `<button class="btn btn-teal btn-full" onclick="finalizeBuzzRound()">✅ 結果確定（全員押した）</button>`;
+      const resultCount = Object.keys(g.results || {}).length;
+      const pCount = Object.keys(participants).length;
+      if (pCount > 0 && resultCount >= pCount) {
+        // 全員押したら自動で結果確定
+        finalizeBuzzRound();
+      } else {
+        badge.className   = 'mode-badge mb-active';
+        badge.textContent = `🔴 早押し受付中 ${resultCount}/${pCount}人 (${g.round || 1}/2)`;
+        resEl.innerHTML   = `<button class="btn btn-teal btn-full" onclick="finalizeBuzzRound()">✅ 結果確定（手動）</button>`;
+      }
     } else if (g.status === 'done') {
       badge.className   = 'mode-badge mb-done';
       badge.textContent = `✅ ラウンド${g.round || 1} 終了`;
       const results = Object.entries(g.results || {}).sort((a,b) => (a[1].ts||0)-(b[1].ts||0));
-      resEl.innerHTML   = results.length === 0 ? '<div style="color:var(--sub);font-size:.8rem">回答者なし</div>'
+      const nextBtn = (g.round || 1) < 2
+        ? `<button class="btn btn-teal btn-full" style="margin-top:10px" onclick="startBuzzRound()">▶ 2回戦へ</button>`
+        : `<button class="btn btn-primary btn-full" style="margin-top:10px" onclick="finishGame()">🏁 ゲーム終了</button>`;
+      resEl.innerHTML = (results.length === 0
+        ? '<div style="color:var(--sub);font-size:.8rem">回答者なし</div>'
         : results.map(([id, r], i) => `
             <div class="game-result-row">
               <span>${i+1}位: 参加者${r.num || id.slice(-3)}番</span>
               ${i===results.length-1 ? `<span style="color:var(--red);font-weight:700">🐢 最遅</span>` : ''}
               ${i===0 ? `<span style="color:var(--accent2);font-weight:700">🏆 最速</span>` : ''}
-            </div>`).join('');
+            </div>`).join('')) + nextBtn;
     }
   } else {
     badge.className   = 'mode-badge mb-idle';

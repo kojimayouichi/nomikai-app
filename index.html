@@ -133,6 +133,7 @@ let buzzCountdown = 0;
 let participantCount = 0;
 let lastQRound = 0;
 let lastGRound = 0;
+let initialModeLoaded = false;
 
 // ============================================================
 // プレゼンス（参加者番号割り当て）
@@ -160,9 +161,17 @@ db.ref('presence').on('value', snap => {
 db.ref('mode').on('value', snap => {
   const mode = snap.val() || 'idle';
   if (mode === 'end') {
-    window.location.href = 'end.html';
+    if (initialModeLoaded) {
+      // セッション中にendになった場合のみリダイレクト（再アクセス時はスキップ）
+      window.location.href = 'end.html';
+    } else {
+      initialModeLoaded = true;
+      currentMode = 'idle';
+      render();
+    }
     return;
   }
+  initialModeLoaded = true;
   if (mode !== currentMode) {
     currentMode = mode;
     // モード切替時に個人状態リセット
@@ -324,6 +333,7 @@ function renderBuzzCountdown(el, g) {
   el.innerHTML = `
     <div class="card teal fade-in">
       <div class="card-label">🔴 早押しゲーム (${g.round || 1}/2回目)</div>
+      <div style="text-align:center;font-size:.8rem;color:var(--sub);margin-bottom:4px">あなたは <span style="color:var(--accent2);font-weight:900;font-size:1.1rem">${myNum || '?'}番</span></div>
       <div class="game-area">
         <div class="buzz-hint">10秒過ぎたら「押せ！」の合図！</div>
         <div class="countdown-num ${urgent?'urgent':''}" id="cdNum">${remaining}</div>
@@ -348,6 +358,7 @@ function renderBuzzReady(el, g) {
   el.innerHTML = `
     <div class="card teal fade-in">
       <div class="card-label">🔴 早押しゲーム (${g.round || 1}/2回目)</div>
+      <div style="text-align:center;font-size:.8rem;color:var(--sub);margin-bottom:4px">あなたは <span style="color:var(--accent2);font-weight:900;font-size:1.1rem">${myNum || '?'}番</span></div>
       <div class="game-area">
         ${myBuzzed ? `
           <div class="buzz-hint" style="color:var(--teal);font-size:1.2rem;font-weight:700">✅ 押した！結果待ち…</div>
