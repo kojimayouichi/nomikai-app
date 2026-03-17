@@ -132,6 +132,7 @@ let buzzTimerInterval = null;
 let buzzCountdown = 0;
 let participantCount = 0;
 let lastQRound = 0;
+let lastGRound = 0;
 
 // ============================================================
 // プレゼンス（参加者番号割り当て）
@@ -189,7 +190,15 @@ db.ref('question').on('value', snap => {
   }
   if (currentMode === 'question') render();
 });
-db.ref('game').on('value',     snap => { gState = snap.val() || {}; if (currentMode === 'game')     renderGame(); });
+db.ref('game').on('value', snap => {
+  gState = snap.val() || {};
+  // ラウンドが変わったら早押し状態をリセット
+  if (gState.round && gState.status === 'countdown' && gState.round !== lastGRound) {
+    lastGRound = gState.round;
+    myBuzzed = false;
+  }
+  if (currentMode === 'game') renderGame();
+});
 db.ref('message').on('value',  snap => { mState = snap.val() || {}; if (currentMode === 'message')  render(); });
 
 // ============================================================
@@ -384,8 +393,9 @@ function renderBuzzDone(el, g) {
 }
 
 function getNumFromResults(id, g) {
-  // presenceから番号取得（簡易）
-  return id ? id.slice(-3) : '?';
+  if (!id) return '?';
+  const results = g.results || {};
+  return results[id] ? results[id].num : '?';
 }
 
 window.doBuzz = function() {
