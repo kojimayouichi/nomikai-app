@@ -61,7 +61,8 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 .result-num{min-width:52px;text-align:right;color:var(--sub);font-size:.8rem}
 /* QRコード */
 .qr-area{display:flex;flex-direction:column;align-items:center;gap:12px;padding:8px 0}
-#qrCanvas{border-radius:12px;background:white;padding:12px}
+#qrCanvas{border-radius:12px;background:white;padding:12px;display:inline-block}
+#qrCanvas canvas,#qrCanvas img{display:block;border-radius:8px}
 .qr-url{font-size:.75rem;color:var(--sub);text-align:center;word-break:break-all}
 /* ゲーム結果 */
 .game-results{display:flex;flex-direction:column;gap:6px;margin-top:12px}
@@ -97,7 +98,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
     <div class="card">
       <div class="card-accent ca-blue"></div>
       <div class="qr-area">
-        <canvas id="qrCanvas" width="200" height="200"></canvas>
+        <div id="qrCanvas"></div>
         <div class="qr-url">https://kojimayouichi.github.io/nomikai-app/</div>
       </div>
     </div>
