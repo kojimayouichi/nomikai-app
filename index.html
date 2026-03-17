@@ -131,6 +131,7 @@ let msgSent    = false;
 let buzzTimerInterval = null;
 let buzzCountdown = 0;
 let participantCount = 0;
+let lastQRound = 0;
 
 // ============================================================
 // プレゼンス（参加者番号割り当て）
@@ -179,7 +180,15 @@ let qState  = {};
 let gState  = {};
 let mState  = {};
 
-db.ref('question').on('value', snap => { qState = snap.val() || {}; if (currentMode === 'question') render(); });
+db.ref('question').on('value', snap => {
+  qState = snap.val() || {};
+  // ラウンドが変わったら投票状態をリセット
+  if (qState.round && qState.round !== lastQRound) {
+    lastQRound = qState.round;
+    myVote = null;
+  }
+  if (currentMode === 'question') render();
+});
 db.ref('game').on('value',     snap => { gState = snap.val() || {}; if (currentMode === 'game')     renderGame(); });
 db.ref('message').on('value',  snap => { mState = snap.val() || {}; if (currentMode === 'message')  render(); });
 
