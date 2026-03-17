@@ -130,6 +130,7 @@ let myBuzzed   = false;
 let msgSent    = false;
 let buzzTimerInterval = null;
 let buzzCountdown = 0;
+let participantCount = 0;
 
 // ============================================================
 // プレゼンス（参加者番号割り当て）
@@ -145,8 +146,10 @@ db.ref('presence').on('value', snap => {
   const idx  = keys.indexOf(myId);
   myNum = idx >= 0 ? idx + 1 : null;
   const total = keys.length;
+  participantCount = total;
   document.getElementById('headerSub').textContent =
     myNum ? `参加者 ${myNum}番 / ${total}人` : `${total}人参加中`;
+  if (currentMode === 'idle') render();
 });
 
 // ============================================================
@@ -196,6 +199,10 @@ function renderIdle() {
     <div class="waiting fade-in">
       <div class="waiting-icon">🍺</div>
       ${myNum ? `<div style="font-size:.85rem;color:var(--sub)">あなたの番号</div><div class="my-num">${myNum}</div>` : ''}
+      <div style="display:flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--border);border-radius:100px;padding:8px 20px">
+        <div style="width:8px;height:8px;border-radius:50%;background:var(--teal);box-shadow:0 0 8px var(--teal);animation:pulse 2s ease-in-out infinite"></div>
+        <span style="font-size:.9rem;color:var(--teal);font-weight:700">${participantCount}人 参加中</span>
+      </div>
       <div class="waiting-text">ホストがモードを<br>選ぶまで待ってね！</div>
     </div>`;
 }
