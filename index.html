@@ -385,13 +385,11 @@ function getNumFromResults(id, g) {
 
 window.doBuzz = function() {
   if (myBuzzed) return;
-  const snap_ref = db.ref('game/status');
-  snap_ref.once('value', snap => {
-    if (snap.val() !== 'ready') return;
-    myBuzzed = true;
-    db.ref('game/results/' + myId).set({ ts: firebase.database.ServerValue.TIMESTAMP, num: myNum || 0 });
-    document.getElementById('buzzBtn').disabled = true;
-  });
+  if (gState.status !== 'ready') return;
+  myBuzzed = true;
+  const btn = document.getElementById('buzzBtn');
+  if (btn) btn.disabled = true;
+  db.ref('game/results/' + myId).set({ ts: firebase.database.ServerValue.TIMESTAMP, num: myNum || 0 });
 };
 
 // ===== メッセージ =====
