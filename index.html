@@ -340,8 +340,13 @@ function renderBuzzReady(el, g) {
     <div class="card teal fade-in">
       <div class="card-label">🔴 早押しゲーム (${g.round || 1}/2回目)</div>
       <div class="game-area">
-        <div class="buzz-hint" style="color:var(--accent);font-size:1.2rem;font-weight:700">今すぐ押せ！！🔥</div>
-        <button class="buzz-btn" id="buzzBtn" onclick="doBuzz()">押す！</button>
+        ${myBuzzed ? `
+          <div class="buzz-hint" style="color:var(--teal);font-size:1.2rem;font-weight:700">✅ 押した！結果待ち…</div>
+          <button class="buzz-btn" disabled>押した！</button>
+        ` : `
+          <div class="buzz-hint" style="color:var(--accent);font-size:1.2rem;font-weight:700">今すぐ押せ！！🔥</div>
+          <button class="buzz-btn" id="buzzBtn" onclick="doBuzz()">押す！</button>
+        `}
       </div>
     </div>`;
 }
