@@ -177,6 +177,21 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
     </div>
   </div>
 
+  <!-- お絵かきゲーム -->
+  <div class="section">
+    <div class="section-title">🎨 お絵かきゲーム</div>
+    <div class="card">
+      <div class="card-accent ca-teal"></div>
+      <div class="mode-badge mb-idle" id="dwBadge">● 待機中</div>
+      <div style="font-size:.85rem;color:var(--sub);margin-bottom:14px">描く人がお題の絵を描き、他の人が何の絵か当てる！3ラウンド制。答えはその場で叫ぶ！</div>
+      <div class="btn-row">
+        <button class="btn btn-teal" id="dwStartBtn" onclick="startDrawGame()">▶ お絵かき開始</button>
+        <button class="btn btn-ghost btn-sm" onclick="resetMode()">リセット</button>
+      </div>
+      <div id="dwStatus" style="margin-top:14px"></div>
+    </div>
+  </div>
+
   <!-- カードゲーム -->
   <div class="section">
     <div class="section-title">🃏 カードゲーム</div>
@@ -249,6 +264,14 @@ const PENALTIES = [
   '嫌いなものを発表',
 ];
 
+// お絵かきお題リスト
+const DRAW_TOPICS = [
+  'スマホ', '猫', '自転車', '富士山', 'ピザ',
+  'バナナ', 'サングラス', '新幹線', 'アイスクリーム', '花火',
+  'カメラ', '東京タワー', 'クマ', 'ラーメン', '飛行機',
+  '虹', 'テレビ', 'りんご', 'ロケット', 'ケーキ',
+];
+
 // あるある？ないない？お題
 const ARUANA = [
   '拾ったものを自分のものにしたことがある',
@@ -271,6 +294,8 @@ let aruRound     = 0;    // あるあるラウンド (0-2)
 let aruUsed      = [];   // 使用済みお題インデックス
 let cardRound    = 0;    // カードゲームラウンド (0-2)
 let usedPenalties = [];  // 使用済み罰ゲームインデックス
+let drawRound    = 0;    // お絵かきラウンド (0-2)
+let drawUsed     = [];   // 使用済みお題インデックス
 let gAutoTimer   = null;
 
 // ============================================================
@@ -285,7 +310,7 @@ db.ref('presence').on('value', snap => {
 
 db.ref('mode').on('value', snap => {
   currentMode = snap.val() || 'idle';
-  const modeLabels = { idle:'待機', question:'質問', game:'ゲーム', message:'メッセージ', end:'終了' };
+  const modeLabels = { idle:'待機', question:'質問', game:'ゲーム', message:'メッセージ', end:'終了', aruana:'あるある', cardgame:'カード', drawing:'お絵かき' };
   document.getElementById('sMode').textContent = modeLabels[currentMode] || currentMode;
 });
 
@@ -812,6 +837,89 @@ function updateCardUI(c) {
 }
 
 // ============================================================
+// お絵かきゲームモード
+// ============================================================
+db.ref('drawing').on('value', snap => {
+  const d = snap.val() || {};
+  updateDrawUI(d);
+  if (d.active && d.nextReady) {
+    const pCount     = Object.keys(participants).length;
+    const readyCount = Object.keys(d.nextReady).length;
+    if (pCount > 0 && readyCount >= pCount) advanceDrawRound();
+  }
+});
+
+window.startDrawGame = async function() {
+  drawRound = 0;
+  drawUsed  = [];
+  await db.ref('mode').set('drawing');
+  publishNextDrawRound();
+};
+
+function publishNextDrawRound() {
+  if (drawRound >= 3) { finishDrawGame(); return; }
+  drawRound++;
+  const available = DRAW_TOPICS.map((_, i) => i).filter(i => !drawUsed.includes(i));
+  const idx = available[Math.floor(Math.random() * available.length)];
+  drawUsed.push(idx);
+  const ids       = Object.keys(participants).sort();
+  const drawerIdx = Math.floor(Math.random() * ids.length);
+  const drawerId  = ids[drawerIdx];
+  const drawerNum = drawerIdx + 1;
+  db.ref('drawing').set({
+    round: drawRound, active: true,
+    drawerId, drawerNum,
+    topic:     DRAW_TOPICS[idx],
+    strokes:   {},
+    status:    'drawing',
+    nextReady: {}
+  });
+  document.getElementById('sRound').textContent = drawRound + '/3';
+}
+
+window.markCorrect = function() {
+  db.ref('drawing').update({ status: 'correct' });
+};
+
+function advanceDrawRound() {
+  db.ref('drawing/active').once('value', snap => {
+    if (!snap.val()) return;
+    db.ref('drawing/active').set(false);
+    setTimeout(() => publishNextDrawRound(), 1500);
+  });
+}
+
+function finishDrawGame() {
+  db.ref('drawing').set({ active: false });
+  db.ref('mode').set('end');
+  document.getElementById('sRound').textContent = '-';
+}
+
+function updateDrawUI(d) {
+  const badge    = document.getElementById('dwBadge');
+  const statusEl = document.getElementById('dwStatus');
+  const startBtn = document.getElementById('dwStartBtn');
+  if (!badge) return;
+  if (currentMode === 'drawing' && d.active) {
+    badge.className   = 'mode-badge mb-active';
+    badge.textContent = `▶ ラウンド ${d.round || 1}/3`;
+    startBtn.disabled = true;
+    const isCorrect = d.status === 'correct';
+    statusEl.innerHTML = `
+      <div style="font-size:.75rem;color:var(--sub);margin-bottom:4px">描く人：<span style="color:var(--accent2);font-weight:700">${d.drawerNum || '?'}番さん</span></div>
+      <div style="font-size:.9rem;font-weight:700;color:var(--text);margin-bottom:10px">お題：${d.topic || ''}</div>
+      ${!isCorrect
+        ? `<button class="btn btn-teal btn-sm" onclick="markCorrect()">✅ 正解！</button>`
+        : `<div style="color:var(--teal);font-weight:700;font-size:1rem">🎉 正解！次のラウンドへ...</div>`}`;
+  } else if (currentMode !== 'drawing') {
+    badge.className   = 'mode-badge mb-idle';
+    badge.textContent = '● 待機中';
+    startBtn.disabled = false;
+    statusEl.innerHTML = '';
+  }
+}
+
+// ============================================================
 // 全体操作
 // ============================================================
 window.resetMode = function() {
@@ -823,6 +931,7 @@ window.resetMode = function() {
   db.ref('message').set({ active: false });
   db.ref('aruana').set({ active: false });
   db.ref('cardgame').set({ active: false });
+  db.ref('drawing').set({ active: false });
 };
 
 window.endAll = function() {

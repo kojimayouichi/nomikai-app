@@ -9,7 +9,7 @@
 :root {
   --bg:#0f0f1a; --surface:#1a1a2e; --surface2:#252540;
   --accent:#ff6b35; --accent2:#ffd166; --teal:#06d6a0;
-  --blue:#4895ef; --text:#f0eaff; --sub:#9990bb;
+  --blue:#4895ef; --purple:#a78bfa; --text:#f0eaff; --sub:#9990bb;
   --border:rgba(255,255,255,0.08); --red:#ef476f;
 }
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
@@ -104,6 +104,9 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 .result-card-icon{font-size:2rem}
 .result-card-name{font-size:.7rem;font-weight:700}
 .result-card-badge{font-size:.65rem;font-weight:700;padding:2px 8px;border-radius:100px;margin-top:2px}
+/* お絵かき */
+.draw-wrap{width:100%;aspect-ratio:4/3;border-radius:16px;overflow:hidden;background:#fff;touch-action:none}
+#drawCanvas{width:100%;height:100%;display:block}
 /* ユーティリティ */
 .fade-in{animation:fadeIn .3s ease}
 @keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
@@ -153,6 +156,10 @@ let lastCardRound     = 0;
 let myCardVote        = null;
 let rulesAcknowledged = false;
 let initialModeLoaded = false;
+let drawState     = {};
+let amIDrawer     = false;
+let allStrokes    = {};
+let lastDrawRound = 0;
 
 // ============================================================
 // プレゼンス（参加者番号割り当て）
@@ -200,6 +207,8 @@ db.ref('mode').on('value', snap => {
     myAruVote = null;
     myCardVote        = null;
     rulesAcknowledged = false;
+    amIDrawer  = false;
+    allStrokes = {};
     if (buzzTimerInterval) { clearInterval(buzzTimerInterval); buzzTimerInterval = null; }
   }
   render();
@@ -252,6 +261,24 @@ db.ref('cardgame').on('value', snap => {
   if (currentMode === 'cardgame') render();
 });
 
+db.ref('drawing').on('value', snap => {
+  const newState   = snap.val() || {};
+  const prevStatus = drawState.status;
+  const roundChanged = newState.round && newState.round !== lastDrawRound;
+  if (roundChanged) { lastDrawRound = newState.round; allStrokes = {}; }
+  if (newState.strokes) allStrokes = { ...newState.strokes };
+  drawState = newState;
+  const newAmIDrawer = newState.drawerId === myId;
+  if (currentMode !== 'drawing') { amIDrawer = newAmIDrawer; return; }
+  const statusChanged = prevStatus !== newState.status;
+  amIDrawer = newAmIDrawer;
+  if (roundChanged || statusChanged || !document.getElementById('drawCanvas')) {
+    render();
+  } else if (!amIDrawer) {
+    redrawCanvas();
+  }
+});
+
 // ============================================================
 // メイン描画
 // ============================================================
@@ -262,6 +289,7 @@ function render() {
   else if (currentMode === 'message')  renderMessage();
   else if (currentMode === 'aruana')   renderAruana();
   else if (currentMode === 'cardgame')  renderCard();
+  else if (currentMode === 'drawing')   renderDraw();
 }
 
 // ===== 待機 =====
@@ -714,6 +742,147 @@ window.castCardVote = function(card) {
 
 window.pressCardNext = function() {
   db.ref('cardgame/nextReady/' + myId).set(true);
+};
+
+// ===== お絵かき =====
+function renderDraw() {
+  const d  = drawState;
+  const el = document.getElementById('mainContent');
+  if (!d.active) {
+    el.innerHTML = `<div class="waiting fade-in"><div class="waiting-icon">🎨</div><div class="waiting-text">読み込み中...</div></div>`;
+    return;
+  }
+  const isCorrect  = d.status === 'correct';
+  const myNextDone = (d.nextReady || {})[myId];
+  const isLast     = (d.round || 1) >= 3;
+
+  el.innerHTML = `
+    <div class="card fade-in">
+      <div class="card-label" style="color:var(--teal)">🎨 お絵かきゲーム (${d.round || 1}/3)</div>
+      ${amIDrawer
+        ? `<div style="background:rgba(255,209,102,.1);border:1.5px solid rgba(255,209,102,.3);border-radius:12px;padding:10px 14px;text-align:center;margin-bottom:10px">
+             <div style="font-size:.7rem;color:var(--accent2);letter-spacing:.1em;font-weight:700;margin-bottom:4px">あなたのお題</div>
+             <div style="font-size:1.6rem;font-weight:900">${d.topic}</div>
+             <div style="font-size:.75rem;color:var(--sub);margin-top:4px">この画面は他の人には見えません！</div>
+           </div>`
+        : `<div style="text-align:center;color:var(--sub);font-size:.9rem;margin-bottom:10px">${d.drawerNum || '?'}番さんが描いています... 何の絵か当てよう！🤔</div>`
+      }
+      <div class="draw-wrap" id="drawWrap"><canvas id="drawCanvas"></canvas></div>
+      ${amIDrawer && !isCorrect
+        ? `<button onclick="clearDrawCanvas()" style="width:100%;margin-top:8px;padding:10px;border-radius:12px;border:1.5px solid var(--border);background:var(--surface2);color:var(--sub);font-family:inherit;font-size:.85rem;font-weight:700;cursor:pointer">🗑️ 全消し</button>`
+        : ''}
+      ${isCorrect ? `
+        <div class="result-banner win" style="margin-top:12px">🎉 正解！お題は「${d.topic}」でした！</div>
+        ${!myNextDone ? `<button class="next-btn" onclick="pressDrawNext()" style="margin-top:10px">${isLast ? '終了' : '次のラウンドへ ▶'}</button>` : ''}
+        ${myNextDone  ? `<div style="text-align:center;color:var(--sub);font-size:.85rem;margin-top:14px">次のラウンドを待っています...</div>` : ''}
+      ` : ''}
+    </div>`;
+
+  setupCanvas();
+}
+
+function setupCanvas() {
+  const canvas = document.getElementById('drawCanvas');
+  if (!canvas) return;
+  const wrap = document.getElementById('drawWrap');
+  canvas.width  = wrap.clientWidth  || 300;
+  canvas.height = wrap.clientHeight || 225;
+  redrawCanvas();
+  if (amIDrawer && drawState.status === 'drawing') attachDrawEvents(canvas);
+}
+
+function redrawCanvas() {
+  const canvas = document.getElementById('drawCanvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  for (const key of Object.keys(allStrokes).sort()) {
+    paintStroke(ctx, allStrokes[key], canvas.width, canvas.height);
+  }
+}
+
+function paintStroke(ctx, pts, w, h) {
+  if (!pts || typeof pts !== 'string') return;
+  const nums = pts.split(',').map(Number);
+  if (nums.length < 4) return;
+  ctx.beginPath();
+  ctx.strokeStyle = '#1a1a1a';
+  ctx.lineWidth   = Math.max(3, w * 0.012);
+  ctx.lineCap     = 'round';
+  ctx.lineJoin    = 'round';
+  ctx.moveTo(nums[0] * w, nums[1] * h);
+  for (let i = 2; i < nums.length - 1; i += 2) {
+    ctx.lineTo(nums[i] * w, nums[i + 1] * h);
+  }
+  ctx.stroke();
+}
+
+function attachDrawEvents(canvas) {
+  const w = canvas.width;
+  const h = canvas.height;
+  let drawing = false;
+  let pts = [];
+
+  function getPos(e) {
+    const rect  = canvas.getBoundingClientRect();
+    const touch = e.touches ? e.touches[0] : e;
+    return [(touch.clientX - rect.left) / rect.width,
+            (touch.clientY - rect.top)  / rect.height];
+  }
+
+  function onStart(e) {
+    e.preventDefault();
+    drawing = true; pts = [];
+    const [x, y] = getPos(e);
+    pts.push(x, y);
+  }
+
+  function onMove(e) {
+    e.preventDefault();
+    if (!drawing) return;
+    const [x, y] = getPos(e);
+    pts.push(x, y);
+    if (pts.length >= 4) {
+      const ctx2 = canvas.getContext('2d');
+      ctx2.beginPath();
+      ctx2.strokeStyle = '#1a1a1a';
+      ctx2.lineWidth   = Math.max(3, w * 0.012);
+      ctx2.lineCap     = 'round';
+      ctx2.lineJoin    = 'round';
+      ctx2.moveTo(pts[pts.length - 4] * w, pts[pts.length - 3] * h);
+      ctx2.lineTo(pts[pts.length - 2] * w, pts[pts.length - 1] * h);
+      ctx2.stroke();
+    }
+  }
+
+  function onEnd(e) {
+    if (!drawing) return;
+    drawing = false;
+    if (pts.length >= 4) {
+      const s = pts.map(n => Math.round(n * 1000) / 1000).join(',');
+      db.ref('drawing/strokes').push(s);
+    }
+    pts = [];
+  }
+
+  canvas.addEventListener('mousedown',  onStart);
+  canvas.addEventListener('mousemove',  onMove);
+  canvas.addEventListener('mouseup',    onEnd);
+  canvas.addEventListener('mouseleave', onEnd);
+  canvas.addEventListener('touchstart', onStart, { passive: false });
+  canvas.addEventListener('touchmove',  onMove,  { passive: false });
+  canvas.addEventListener('touchend',   onEnd);
+}
+
+window.clearDrawCanvas = function() {
+  db.ref('drawing/strokes').set({});
+  allStrokes = {};
+  redrawCanvas();
+};
+
+window.pressDrawNext = function() {
+  db.ref('drawing/nextReady/' + myId).set(true);
 };
 
 // ============================================================
