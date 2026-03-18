@@ -408,7 +408,8 @@ function finalizeBuzzRound() {
     const sorted  = Object.entries(results).sort((a,b) => {
       return (a[1].ts || 0) - (b[1].ts || 0);
     });
-    const odai = ODAI[Math.floor(Math.random() * ODAI.length)];
+    const winnerNum = sorted[0] ? (sorted[0][1].num || '?') : '?';
+    const odai = ODAI[Math.floor(Math.random() * ODAI.length)].replace(/勝った人/g, `${winnerNum}番さん`);
     db.ref('game').update({ status: 'done', odai, sortedResults: sorted.map(([id]) => id) });
   });
 }
