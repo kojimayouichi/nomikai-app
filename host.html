@@ -30,6 +30,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 .ca-teal{background:linear-gradient(90deg,var(--teal),var(--blue))}
 .ca-blue{background:linear-gradient(90deg,var(--blue),var(--purple))}
 .ca-red{background:linear-gradient(90deg,var(--red),var(--accent))}
+.ca-purple{background:linear-gradient(90deg,var(--purple),#7c5fe6)}
 .btn{padding:12px 20px;border-radius:12px;border:none;font-family:'Zen Kaku Gothic New',sans-serif;font-size:.9rem;font-weight:700;cursor:pointer;transition:all .2s}
 .btn:active{transform:scale(.96)}
 .btn:disabled{opacity:.4;cursor:default;transform:none}
@@ -160,6 +161,21 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
     </div>
   </div>
 
+  <!-- あるある？ないない？ -->
+  <div class="section">
+    <div class="section-title">🙋 あるある？ないない？</div>
+    <div class="card">
+      <div class="card-accent ca-purple"></div>
+      <div class="mode-badge mb-idle" id="aBadge">● 待機中</div>
+      <div style="font-size:.85rem;color:var(--sub);margin-bottom:14px">ランダム3問。「ある」か「ない」で全員回答。3問終わったら終了画面へ。</div>
+      <div class="btn-row">
+        <button class="btn btn-purple" id="aStartBtn" onclick="startAruana()">▶ あるある開始</button>
+        <button class="btn btn-ghost btn-sm" onclick="resetMode()">リセット</button>
+      </div>
+      <div id="aStatus" style="margin-top:14px"></div>
+    </div>
+  </div>
+
 </div>
 
 <!-- QRコード生成ライブラリ -->
@@ -207,6 +223,15 @@ const ODAI = [
   '勝った人へのエールを送ってください',
 ];
 
+// あるある？ないない？お題
+const ARUANA = [
+  '拾ったものを自分のものにしたことがある',
+  '人にみせてる自分の顔と本当の顔がちょっと違う',
+  '会社や学校をサボった理由、嘘ついたことがある',
+  '元カレ・元カノのSNSをこっそり見たことがある',
+  '実は惚れっぽい',
+];
+
 // ============================================================
 // 状態
 // ============================================================
@@ -216,6 +241,8 @@ let qUsed        = [];   // 使用済み質問インデックス
 let qRound       = 0;    // 質問ラウンド (0-2)
 let gRound       = 0;    // ゲームラウンド (0-1)
 let mRound       = 0;    // メッセージラウンド (0-1)
+let aruRound     = 0;    // あるあるラウンド (0-2)
+let aruUsed      = [];   // 使用済みお題インデックス
 let gAutoTimer   = null;
 
 // ============================================================
@@ -552,6 +579,85 @@ function updateMUI(m) {
 }
 
 // ============================================================
+// あるある？ないない？モード
+// ============================================================
+db.ref('aruana').on('value', snap => {
+  const a = snap.val() || {};
+  updateAruanaUI(a);
+  if (a.active && a.nextReady && a.participants) {
+    const readyCount = Object.keys(a.nextReady).length;
+    if (readyCount >= a.participants) advanceAruana();
+  }
+});
+
+window.startAruana = async function() {
+  aruUsed  = [];
+  aruRound = 0;
+  await db.ref('mode').set('aruana');
+  publishNextAruana();
+};
+
+function publishNextAruana() {
+  if (aruRound >= 3) {
+    finishAruana();
+    return;
+  }
+  const available = ARUANA.map((_, i) => i).filter(i => !aruUsed.includes(i));
+  const idx = available[Math.floor(Math.random() * available.length)];
+  aruUsed.push(idx);
+  aruRound++;
+  const pCount = Object.keys(participants).length;
+  db.ref('aruana').set({
+    active:       true,
+    round:        aruRound,
+    text:         ARUANA[idx],
+    aru:          0,
+    nai:          0,
+    answered:     0,
+    participants: pCount,
+    nextReady:    {}
+  });
+  document.getElementById('sRound').textContent = aruRound + '/3';
+}
+
+function advanceAruana() {
+  db.ref('aruana/active').once('value', snap => {
+    if (!snap.val()) return;
+    db.ref('aruana/active').set(false);
+    setTimeout(() => publishNextAruana(), 1500);
+  });
+}
+
+function finishAruana() {
+  db.ref('aruana').set({ active: false });
+  db.ref('mode').set('end');
+  document.getElementById('sRound').textContent = '-';
+}
+
+function updateAruanaUI(a) {
+  const badge    = document.getElementById('aBadge');
+  const statusEl = document.getElementById('aStatus');
+  const startBtn = document.getElementById('aStartBtn');
+  if (currentMode === 'aruana' && a.active) {
+    badge.className    = 'mode-badge mb-active';
+    badge.textContent  = `▶ 進行中 ${a.round || 1}/3問目`;
+    startBtn.disabled  = true;
+    statusEl.innerHTML = `
+      <div style="font-size:.8rem;color:var(--sub)">${a.answered || 0}/${a.participants || 0}人が回答済み</div>
+      <div style="margin-top:8px;font-size:.85rem;font-weight:700;color:var(--sub)">${a.text || ''}</div>
+      <div style="margin-top:8px;display:flex;gap:12px">
+        <span style="color:var(--teal);font-weight:700">🙋 ある: ${a.aru || 0}人</span>
+        <span style="color:var(--red);font-weight:700">🙅 ない: ${a.nai || 0}人</span>
+      </div>`;
+  } else if (currentMode !== 'aruana') {
+    badge.className    = 'mode-badge mb-idle';
+    badge.textContent  = '● 待機中';
+    startBtn.disabled  = false;
+    statusEl.innerHTML = '';
+  }
+}
+
+// ============================================================
 // 全体操作
 // ============================================================
 window.resetMode = function() {
@@ -561,6 +667,7 @@ window.resetMode = function() {
   db.ref('question').set({ active: false });
   db.ref('game').set({ status: 'idle' });
   db.ref('message').set({ active: false });
+  db.ref('aruana').set({ active: false });
 };
 
 window.endAll = function() {
