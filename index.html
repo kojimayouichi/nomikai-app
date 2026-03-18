@@ -284,7 +284,7 @@ function renderQuestion() {
       <div class="card-title">${q.text}</div>
       <div class="choices">${choices}</div>
       ${showResult ? `<div style="font-size:.75rem;color:var(--sub);margin-top:10px;text-align:center">合計 ${totalV} 票</div>` : ''}
-      ${canNext && !myNextDone ? `<button class="next-btn" onclick="pressNext()">次の質問へ ▶</button>` : ''}
+      ${canNext && !myNextDone ? `<button class="next-btn" onclick="pressNext()">${round >= total ? '終了' : '次の質問へ ▶'}</button>` : ''}
       ${canNext && myNextDone  ? `<div style="text-align:center;color:var(--sub);font-size:.85rem;margin-top:14px">次の質問を待っています...</div>` : ''}
       ${!allAnswered && showed ? `<div style="text-align:center;color:var(--sub);font-size:.85rem;margin-top:14px">他の人の回答を待っています...</div>` : ''}
     </div>`;
