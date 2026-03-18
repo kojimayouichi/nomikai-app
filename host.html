@@ -788,7 +788,7 @@ function updateCardUI(c) {
       const nums    = c.nums    || {};
       const sel     = c.selections || {};
       const results = c.results;
-      const CARD_LABEL = { red:'🔴赤', blue:'🔵青', white:'⬜白' };
+      const CARD_LABEL = { red:'⚔️兵士', blue:'🤝市民', white:'🔮魔法使い' };
       const rows = Object.entries(nums)
         .sort((a, b) => a[1] - b[1])
         .map(([uid, num]) => {

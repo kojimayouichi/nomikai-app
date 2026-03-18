@@ -90,6 +90,20 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 .msg-received-label{font-size:.7rem;color:var(--teal);letter-spacing:.15em;margin-bottom:10px;font-weight:700}
 .msg-received-text{font-size:1.1rem;line-height:1.7;word-break:break-all}
 .msg-received-empty{font-size:.9rem;color:var(--sub);text-align:center;padding:10px}
+/* カードゲーム */
+.play-cards{display:flex;gap:10px;justify-content:center;margin-top:12px}
+.play-card{display:flex;flex-direction:column;align-items:center;justify-content:center;border-radius:16px;border:2.5px solid;cursor:pointer;padding:16px 8px;gap:6px;transition:transform .15s,box-shadow .15s;background:var(--surface2);flex:1;min-height:156px}
+.play-card:active{transform:scale(.93) translateY(-4px)}
+.play-card-icon{font-size:2.6rem}
+.play-card-name{font-size:.9rem;font-weight:900}
+.play-card-rule{font-size:.62rem;color:var(--sub);text-align:center;line-height:1.5}
+.result-cards{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:10px}
+.result-card{display:flex;flex-direction:column;align-items:center;border-radius:14px;border:2px solid;padding:12px 6px;gap:3px;min-width:72px;max-width:90px;position:relative}
+.result-card.me{box-shadow:0 0 0 2px var(--accent2)}
+.result-card-num{font-size:.65rem;color:var(--sub)}
+.result-card-icon{font-size:2rem}
+.result-card-name{font-size:.7rem;font-weight:700}
+.result-card-badge{font-size:.65rem;font-weight:700;padding:2px 8px;border-radius:100px;margin-top:2px}
 /* ユーティリティ */
 .fade-in{animation:fadeIn .3s ease}
 @keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
@@ -135,8 +149,9 @@ let lastQRound = 0;
 let lastGRound = 0;
 let lastAruRound = 0;
 let myAruVote = null;
-let lastCardRound = 0;
-let myCardVote    = null;
+let lastCardRound     = 0;
+let myCardVote        = null;
+let rulesAcknowledged = false;
 let initialModeLoaded = false;
 
 // ============================================================
@@ -183,7 +198,8 @@ db.ref('mode').on('value', snap => {
     myBuzzed  = false;
     msgSent   = false;
     myAruVote = null;
-    myCardVote = null;
+    myCardVote        = null;
+    rulesAcknowledged = false;
     if (buzzTimerInterval) { clearInterval(buzzTimerInterval); buzzTimerInterval = null; }
   }
   render();
@@ -574,70 +590,105 @@ window.pressAruNext = function() {
 };
 
 // ===== カードゲーム =====
+const CARD_INFO = {
+  red:   { name: '兵士',     emoji: '⚔️',  color: 'var(--red)',    rule: '自分だけ兵士で\n残りが全員市民なら勝ち' },
+  blue:  { name: '市民',     emoji: '🤝',  color: 'var(--blue)',   rule: '全員が市民\nなら全員勝ち' },
+  white: { name: '魔法使い', emoji: '🔮',  color: 'var(--purple)', rule: '兵士と市民が\n両方いれば勝ち' }
+};
+
 function renderCard() {
   const c  = cardState;
   const el = document.getElementById('mainContent');
+
   if (!c.active || !c.penalty) {
     el.innerHTML = `<div class="waiting fade-in"><div class="waiting-icon">🃏</div><div class="waiting-text">読み込み中...</div></div>`;
     return;
   }
 
-  const answered  = c.answered || 0;
-  const parts     = c.participants || 1;
-  const allAnswered = answered >= parts;
-  const voted     = myCardVote !== null;
-  const myNextDone = (c.nextReady || {})[myId];
-  const isLast    = (c.round || 1) >= 3;
-  const CARD_LABEL = { red: '🔴赤', blue: '🔵青', white: '⬜白' };
-  const CARD_COLOR = { red: 'var(--red)', blue: 'var(--blue)', white: 'var(--sub)' };
+  // ルール説明画面（初回のみ）
+  if (!rulesAcknowledged) {
+    el.innerHTML = `
+      <div class="card fade-in">
+        <div class="card-label" style="color:var(--accent2)">🃏 カードゲーム</div>
+        <div style="text-align:center;font-size:1.05rem;font-weight:700;line-height:1.7;margin:12px 0 18px">
+          協力するか、出し抜くか、裏をかくか<br>
+          <span style="color:var(--accent2)">どれが自分っぽい？</span>
+        </div>
+        <div class="play-cards">
+          ${['red','blue','white'].map(key => {
+            const info = CARD_INFO[key];
+            return `<div style="display:flex;flex-direction:column;align-items:center;border-radius:16px;border:2px solid ${info.color};padding:14px 8px;gap:6px;flex:1;background:var(--surface2)">
+              <div style="font-size:2.4rem">${info.emoji}</div>
+              <div style="font-size:.9rem;font-weight:900;color:${info.color}">${info.name}</div>
+              <div style="font-size:.62rem;color:var(--sub);text-align:center;line-height:1.5">${info.rule.replace(/\n/g,'<br>')}</div>
+            </div>`;
+          }).join('')}
+        </div>
+        <button class="next-btn" onclick="ackCardRules()" style="margin-top:20px;background:linear-gradient(135deg,var(--accent2),var(--accent))">
+          準備OK！▶
+        </button>
+      </div>`;
+    return;
+  }
 
+  const answered    = c.answered || 0;
+  const parts       = c.participants || 1;
+  const allAnswered = answered >= parts;
+  const voted       = myCardVote !== null;
+  const myNextDone  = (c.nextReady || {})[myId];
+  const isLast      = (c.round || 1) >= 3;
+  const myInfo      = myCardVote ? CARD_INFO[myCardVote] : null;
+
+  // 結果表示
   let resultsHtml = '';
   if (c.results && c.nums && c.selections) {
-    const myResult = c.results[myId];
-    const myWin    = myResult === 'win';
+    const myWin = c.results[myId] === 'win';
+    const cardRows = Object.entries(c.nums)
+      .sort((a, b) => a[1] - b[1])
+      .map(([uid, num]) => {
+        const card = c.selections[uid];
+        const info = CARD_INFO[card] || { name: card, emoji: '？', color: 'var(--sub)' };
+        const win  = c.results[uid] === 'win';
+        const isMe = uid === myId;
+        return `<div class="result-card${isMe ? ' me' : ''}" style="border-color:${info.color}">
+          <div class="result-card-num">${num}番${isMe ? '(自分)' : ''}</div>
+          <div class="result-card-icon">${info.emoji}</div>
+          <div class="result-card-name" style="color:${info.color}">${info.name}</div>
+          <div class="result-card-badge" style="background:${win ? 'rgba(6,214,160,.15)' : 'rgba(239,71,111,.15)'};color:${win ? 'var(--teal)' : 'var(--red)'}">
+            ${win ? '✅ 勝ち' : '❌ 負け'}
+          </div>
+        </div>`;
+      }).join('');
     resultsHtml = `
       <div class="result-banner ${myWin ? 'win' : 'last'}" style="margin-top:12px">
         ${myWin ? '🎉 勝ち！' : '😭 負け…罰ゲーム！'}
       </div>
-      <div style="margin-top:10px;display:flex;flex-direction:column;gap:6px">
-        ${Object.entries(c.nums).sort((a,b)=>a[1]-b[1]).map(([uid, num]) => {
-          const card = c.selections[uid] || '-';
-          const win  = c.results[uid] === 'win';
-          const isMe = uid === myId;
-          return `<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:${isMe?'rgba(255,209,102,.08)':'var(--surface2)'};border:${isMe?'1.5px solid rgba(255,209,102,.3)':'1px solid transparent'};border-radius:10px;font-size:.85rem">
-            <span>${num}番${isMe?' (あなた)':''}: <span style="color:${CARD_COLOR[card]};font-weight:700">${CARD_LABEL[card]||card}</span></span>
-            <span style="color:${win?'var(--teal)':'var(--red)'};font-weight:700">${win?'✅ 勝ち':'❌ 負け'}</span>
-          </div>`;
-        }).join('')}
-      </div>`;
+      <div class="result-cards">${cardRows}</div>`;
   }
 
   el.innerHTML = `
     <div class="card fade-in">
       <div class="card-label" style="color:var(--accent2)">🃏 カードゲーム (${c.round || 1}/3)</div>
-      <div style="background:rgba(255,209,102,.08);border:1.5px solid rgba(255,209,102,.3);border-radius:12px;padding:12px;margin-bottom:14px;text-align:center">
-        <div style="font-size:.65rem;color:var(--accent2);letter-spacing:.15em;font-weight:700;margin-bottom:4px">🎲 このラウンドの罰ゲーム</div>
+      <div style="background:rgba(255,209,102,.08);border:1.5px solid rgba(255,209,102,.3);border-radius:12px;padding:12px;margin-bottom:12px;text-align:center">
+        <div style="font-size:.62rem;color:var(--accent2);letter-spacing:.15em;font-weight:700;margin-bottom:4px">🎲 このラウンドの罰ゲーム</div>
         <div style="font-size:.95rem;font-weight:700">${c.penalty}</div>
       </div>
       <div class="q-progress">${answered}/${parts}人が回答済み</div>
       ${!voted ? `
-        <div style="display:flex;flex-direction:column;gap:10px;margin-top:10px">
-          <button class="choice-btn" onclick="castCardVote('red')" style="border-color:var(--red)">
-            <span class="choice-text">🔴 赤カード</span>
-            <span style="font-size:.75rem;color:var(--sub);margin-left:8px">自分だけ赤 + 他全員青 → 勝ち</span>
-          </button>
-          <button class="choice-btn" onclick="castCardVote('blue')" style="border-color:var(--blue)">
-            <span class="choice-text">🔵 青カード</span>
-            <span style="font-size:.75rem;color:var(--sub);margin-left:8px">全員青 → 全員勝ち</span>
-          </button>
-          <button class="choice-btn" onclick="castCardVote('white')" style="border-color:var(--sub)">
-            <span class="choice-text">⬜ 白カード</span>
-            <span style="font-size:.75rem;color:var(--sub);margin-left:8px">赤と青が両方ある → 勝ち</span>
-          </button>
+        <div class="play-cards">
+          ${['red','blue','white'].map(key => {
+            const info = CARD_INFO[key];
+            return `<div class="play-card" style="border-color:${info.color}" onclick="castCardVote('${key}')">
+              <div class="play-card-icon">${info.emoji}</div>
+              <div class="play-card-name" style="color:${info.color}">${info.name}</div>
+              <div class="play-card-rule">${info.rule.replace(/\n/g,'<br>')}</div>
+            </div>`;
+          }).join('')}
         </div>
       ` : `
-        <div style="text-align:center;margin-top:10px;padding:10px;background:var(--surface2);border-radius:12px;font-size:.9rem">
-          <span style="color:${CARD_COLOR[myCardVote]};font-weight:700">${CARD_LABEL[myCardVote]}</span>を出しました
+        <div style="text-align:center;margin-top:12px;padding:14px;background:var(--surface2);border-radius:14px">
+          <div style="font-size:2rem">${myInfo ? myInfo.emoji : ''}</div>
+          <div style="font-size:.9rem;font-weight:700;color:${myInfo ? myInfo.color : ''};margin-top:4px">${myInfo ? myInfo.name : ''}を出しました</div>
         </div>
         ${!allAnswered ? `<div style="text-align:center;color:var(--sub);font-size:.85rem;margin-top:10px">他の人の回答を待っています...</div>` : ''}
       `}
@@ -646,6 +697,11 @@ function renderCard() {
       ${allAnswered && voted && c.results && myNextDone ? `<div style="text-align:center;color:var(--sub);font-size:.85rem;margin-top:14px">次のラウンドを待っています...</div>` : ''}
     </div>`;
 }
+
+window.ackCardRules = function() {
+  rulesAcknowledged = true;
+  render();
+};
 
 window.castCardVote = function(card) {
   if (myCardVote !== null) return;
