@@ -31,6 +31,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 .ca-blue{background:linear-gradient(90deg,var(--blue),var(--purple))}
 .ca-red{background:linear-gradient(90deg,var(--red),var(--accent))}
 .ca-purple{background:linear-gradient(90deg,var(--purple),#7c5fe6)}
+.ca-gold{background:linear-gradient(90deg,var(--accent2),var(--accent))}
 .btn{padding:12px 20px;border-radius:12px;border:none;font-family:'Zen Kaku Gothic New',sans-serif;font-size:.9rem;font-weight:700;cursor:pointer;transition:all .2s}
 .btn:active{transform:scale(.96)}
 .btn:disabled{opacity:.4;cursor:default;transform:none}
@@ -176,6 +177,21 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
     </div>
   </div>
 
+  <!-- カードゲーム -->
+  <div class="section">
+    <div class="section-title">🃏 カードゲーム</div>
+    <div class="card">
+      <div class="card-accent ca-gold"></div>
+      <div class="mode-badge mb-idle" id="cgBadge">● 待機中</div>
+      <div style="font-size:.85rem;color:var(--sub);margin-bottom:14px">赤・青・白の3枚から1枚選択。3ラウンド制。各ラウンド前に罰ゲームを提示。</div>
+      <div class="btn-row">
+        <button class="btn btn-primary" id="cgStartBtn" onclick="startCardGame()">▶ カードゲーム開始</button>
+        <button class="btn btn-ghost btn-sm" onclick="resetMode()">リセット</button>
+      </div>
+      <div id="cgStatus" style="margin-top:14px"></div>
+    </div>
+  </div>
+
 </div>
 
 <!-- QRコード生成ライブラリ -->
@@ -223,6 +239,16 @@ const ODAI = [
   '勝った人へのエールを送ってください',
 ];
 
+// カードゲーム罰ゲームリスト
+const PENALTIES = [
+  'グラスを空にする（ソフトドリンクでも可）',
+  '隣の人に一言褒めてもらう',
+  '自分の失敗談を一つ話す',
+  'テーブル全員から乾杯してもらう',
+  '30秒で自己PRをする',
+  '自分のモノマネを一発披露する',
+];
+
 // あるある？ないない？お題
 const ARUANA = [
   '拾ったものを自分のものにしたことがある',
@@ -243,6 +269,8 @@ let gRound       = 0;    // ゲームラウンド (0-1)
 let mRound       = 0;    // メッセージラウンド (0-1)
 let aruRound     = 0;    // あるあるラウンド (0-2)
 let aruUsed      = [];   // 使用済みお題インデックス
+let cardRound    = 0;    // カードゲームラウンド (0-2)
+let usedPenalties = [];  // 使用済み罰ゲームインデックス
 let gAutoTimer   = null;
 
 // ============================================================
@@ -658,6 +686,130 @@ function updateAruanaUI(a) {
 }
 
 // ============================================================
+// カードゲームモード
+// ============================================================
+db.ref('cardgame').on('value', snap => {
+  const c = snap.val() || {};
+  updateCardUI(c);
+  // 全員回答したら結果を計算
+  if (c.active && c.selections && c.participants && !c.results) {
+    const ansCount = Object.keys(c.selections).length;
+    if (ansCount >= c.participants) calcAndWriteCardResults(c);
+  }
+  // 全員nextReadyを押したら次ラウンドへ
+  if (c.results && c.nextReady && c.participants) {
+    const readyCount = Object.keys(c.nextReady).length;
+    if (readyCount >= c.participants) advanceCardRound();
+  }
+});
+
+window.startCardGame = async function() {
+  cardRound     = 0;
+  usedPenalties = [];
+  await db.ref('mode').set('cardgame');
+  publishNextCardRound();
+};
+
+function publishNextCardRound() {
+  if (cardRound >= 3) {
+    finishCardGame();
+    return;
+  }
+  cardRound++;
+  const available = PENALTIES.map((_, i) => i).filter(i => !usedPenalties.includes(i));
+  const pIdx = available[Math.floor(Math.random() * available.length)];
+  usedPenalties.push(pIdx);
+
+  const ids  = Object.keys(participants).sort();
+  const nums = {};
+  ids.forEach((id, i) => { nums[id] = i + 1; });
+
+  db.ref('cardgame').set({
+    round:        cardRound,
+    active:       true,
+    participants: ids.length,
+    penalty:      PENALTIES[pIdx],
+    selections:   {},
+    answered:     0,
+    nums,
+    results:      null,
+    nextReady:    {}
+  });
+  document.getElementById('sRound').textContent = cardRound + '/3';
+}
+
+function calcAndWriteCardResults(c) {
+  const selections = c.selections || {};
+  const entries    = Object.entries(selections);
+  const total      = entries.length;
+  const redCount   = entries.filter(([, v]) => v === 'red').length;
+  const blueCount  = entries.filter(([, v]) => v === 'blue').length;
+
+  const results = {};
+  for (const [uid, card] of entries) {
+    let win;
+    if (card === 'red')        win = redCount === 1 && blueCount === total - 1;
+    else if (card === 'blue')  win = blueCount === total;
+    else                       win = redCount > 0 && blueCount > 0;
+    results[uid] = win ? 'win' : 'lose';
+  }
+  db.ref('cardgame/results').set(results);
+}
+
+function advanceCardRound() {
+  db.ref('cardgame/active').once('value', snap => {
+    if (!snap.val()) return;
+    db.ref('cardgame/active').set(false);
+    setTimeout(() => publishNextCardRound(), 1500);
+  });
+}
+
+function finishCardGame() {
+  db.ref('cardgame').set({ active: false });
+  db.ref('mode').set('end');
+  document.getElementById('sRound').textContent = '-';
+}
+
+function updateCardUI(c) {
+  const badge    = document.getElementById('cgBadge');
+  const statusEl = document.getElementById('cgStatus');
+  const startBtn = document.getElementById('cgStartBtn');
+
+  if (currentMode === 'cardgame' && c.active) {
+    badge.className   = 'mode-badge mb-active';
+    badge.textContent = `▶ ラウンド ${c.round || 1}/3`;
+    startBtn.disabled = true;
+    const answered = c.answered || 0;
+    const parts    = c.participants || 0;
+    statusEl.innerHTML = `
+      <div style="font-size:.75rem;color:var(--accent2);margin-bottom:6px">🎲 罰ゲーム：${c.penalty || ''}</div>
+      <div style="font-size:.8rem;color:var(--sub)">${answered}/${parts}人が回答済み</div>`;
+    if (c.results) {
+      const nums    = c.nums    || {};
+      const sel     = c.selections || {};
+      const results = c.results;
+      const CARD_LABEL = { red:'🔴赤', blue:'🔵青', white:'⬜白' };
+      const rows = Object.entries(nums)
+        .sort((a, b) => a[1] - b[1])
+        .map(([uid, num]) => {
+          const card = sel[uid] || '-';
+          const win  = results[uid] === 'win';
+          return `<div class="game-result-row">
+            <span>${num}番: ${CARD_LABEL[card] || card}</span>
+            <span style="color:${win ? 'var(--teal)' : 'var(--red)' };font-weight:700">${win ? '✅ 勝ち' : '❌ 負け'}</span>
+          </div>`;
+        }).join('');
+      statusEl.innerHTML += rows;
+    }
+  } else if (currentMode !== 'cardgame') {
+    badge.className   = 'mode-badge mb-idle';
+    badge.textContent = '● 待機中';
+    startBtn.disabled = false;
+    statusEl.innerHTML = '';
+  }
+}
+
+// ============================================================
 // 全体操作
 // ============================================================
 window.resetMode = function() {
@@ -668,6 +820,7 @@ window.resetMode = function() {
   db.ref('game').set({ status: 'idle' });
   db.ref('message').set({ active: false });
   db.ref('aruana').set({ active: false });
+  db.ref('cardgame').set({ active: false });
 };
 
 window.endAll = function() {

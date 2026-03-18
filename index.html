@@ -135,6 +135,8 @@ let lastQRound = 0;
 let lastGRound = 0;
 let lastAruRound = 0;
 let myAruVote = null;
+let lastCardRound = 0;
+let myCardVote    = null;
 let initialModeLoaded = false;
 
 // ============================================================
@@ -181,6 +183,7 @@ db.ref('mode').on('value', snap => {
     myBuzzed  = false;
     msgSent   = false;
     myAruVote = null;
+    myCardVote = null;
     if (buzzTimerInterval) { clearInterval(buzzTimerInterval); buzzTimerInterval = null; }
   }
   render();
@@ -223,6 +226,16 @@ db.ref('aruana').on('value', snap => {
   if (currentMode === 'aruana') render();
 });
 
+let cardState = {};
+db.ref('cardgame').on('value', snap => {
+  cardState = snap.val() || {};
+  if (cardState.round && cardState.round !== lastCardRound && !cardState.results) {
+    lastCardRound = cardState.round;
+    myCardVote = null;
+  }
+  if (currentMode === 'cardgame') render();
+});
+
 // ============================================================
 // メイン描画
 // ============================================================
@@ -232,6 +245,7 @@ function render() {
   else if (currentMode === 'game')     renderGame();
   else if (currentMode === 'message')  renderMessage();
   else if (currentMode === 'aruana')   renderAruana();
+  else if (currentMode === 'cardgame')  renderCard();
 }
 
 // ===== 待機 =====
@@ -557,6 +571,92 @@ window.castAruVote = function(vote) {
 
 window.pressAruNext = function() {
   db.ref('aruana/nextReady/' + myId).set(true);
+};
+
+// ===== カードゲーム =====
+function renderCard() {
+  const c  = cardState;
+  const el = document.getElementById('mainContent');
+  if (!c.active || !c.penalty) {
+    el.innerHTML = `<div class="waiting fade-in"><div class="waiting-icon">🃏</div><div class="waiting-text">読み込み中...</div></div>`;
+    return;
+  }
+
+  const answered  = c.answered || 0;
+  const parts     = c.participants || 1;
+  const allAnswered = answered >= parts;
+  const voted     = myCardVote !== null;
+  const myNextDone = (c.nextReady || {})[myId];
+  const isLast    = (c.round || 1) >= 3;
+  const CARD_LABEL = { red: '🔴赤', blue: '🔵青', white: '⬜白' };
+  const CARD_COLOR = { red: 'var(--red)', blue: 'var(--blue)', white: 'var(--sub)' };
+
+  let resultsHtml = '';
+  if (c.results && c.nums && c.selections) {
+    const myResult = c.results[myId];
+    const myWin    = myResult === 'win';
+    resultsHtml = `
+      <div class="result-banner ${myWin ? 'win' : 'last'}" style="margin-top:12px">
+        ${myWin ? '🎉 勝ち！' : '😭 負け…罰ゲーム！'}
+      </div>
+      <div style="margin-top:10px;display:flex;flex-direction:column;gap:6px">
+        ${Object.entries(c.nums).sort((a,b)=>a[1]-b[1]).map(([uid, num]) => {
+          const card = c.selections[uid] || '-';
+          const win  = c.results[uid] === 'win';
+          const isMe = uid === myId;
+          return `<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:${isMe?'rgba(255,209,102,.08)':'var(--surface2)'};border:${isMe?'1.5px solid rgba(255,209,102,.3)':'1px solid transparent'};border-radius:10px;font-size:.85rem">
+            <span>${num}番${isMe?' (あなた)':''}: <span style="color:${CARD_COLOR[card]};font-weight:700">${CARD_LABEL[card]||card}</span></span>
+            <span style="color:${win?'var(--teal)':'var(--red)'};font-weight:700">${win?'✅ 勝ち':'❌ 負け'}</span>
+          </div>`;
+        }).join('')}
+      </div>`;
+  }
+
+  el.innerHTML = `
+    <div class="card fade-in">
+      <div class="card-label" style="color:var(--accent2)">🃏 カードゲーム (${c.round || 1}/3)</div>
+      <div style="background:rgba(255,209,102,.08);border:1.5px solid rgba(255,209,102,.3);border-radius:12px;padding:12px;margin-bottom:14px;text-align:center">
+        <div style="font-size:.65rem;color:var(--accent2);letter-spacing:.15em;font-weight:700;margin-bottom:4px">🎲 このラウンドの罰ゲーム</div>
+        <div style="font-size:.95rem;font-weight:700">${c.penalty}</div>
+      </div>
+      <div class="q-progress">${answered}/${parts}人が回答済み</div>
+      ${!voted ? `
+        <div style="display:flex;flex-direction:column;gap:10px;margin-top:10px">
+          <button class="choice-btn" onclick="castCardVote('red')" style="border-color:var(--red)">
+            <span class="choice-text">🔴 赤カード</span>
+            <span style="font-size:.75rem;color:var(--sub);margin-left:8px">自分だけ赤 + 他全員青 → 勝ち</span>
+          </button>
+          <button class="choice-btn" onclick="castCardVote('blue')" style="border-color:var(--blue)">
+            <span class="choice-text">🔵 青カード</span>
+            <span style="font-size:.75rem;color:var(--sub);margin-left:8px">全員青 → 全員勝ち</span>
+          </button>
+          <button class="choice-btn" onclick="castCardVote('white')" style="border-color:var(--sub)">
+            <span class="choice-text">⬜ 白カード</span>
+            <span style="font-size:.75rem;color:var(--sub);margin-left:8px">赤と青が両方ある → 勝ち</span>
+          </button>
+        </div>
+      ` : `
+        <div style="text-align:center;margin-top:10px;padding:10px;background:var(--surface2);border-radius:12px;font-size:.9rem">
+          <span style="color:${CARD_COLOR[myCardVote]};font-weight:700">${CARD_LABEL[myCardVote]}</span>を出しました
+        </div>
+        ${!allAnswered ? `<div style="text-align:center;color:var(--sub);font-size:.85rem;margin-top:10px">他の人の回答を待っています...</div>` : ''}
+      `}
+      ${resultsHtml}
+      ${allAnswered && voted && c.results && !myNextDone ? `<button class="next-btn" onclick="pressCardNext()" style="margin-top:14px">${isLast ? '終了' : '次のラウンドへ ▶'}</button>` : ''}
+      ${allAnswered && voted && c.results && myNextDone ? `<div style="text-align:center;color:var(--sub);font-size:.85rem;margin-top:14px">次のラウンドを待っています...</div>` : ''}
+    </div>`;
+}
+
+window.castCardVote = function(card) {
+  if (myCardVote !== null) return;
+  myCardVote = card;
+  db.ref('cardgame/selections/' + myId).set(card);
+  db.ref('cardgame/answered').transaction(cur => (cur || 0) + 1);
+  render();
+};
+
+window.pressCardNext = function() {
+  db.ref('cardgame/nextReady/' + myId).set(true);
 };
 
 // ============================================================
