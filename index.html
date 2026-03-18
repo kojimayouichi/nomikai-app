@@ -609,20 +609,21 @@ function renderCard() {
   if (!rulesAcknowledged && (c.round || 1) === 1 && !c.results) {
     el.innerHTML = `
       <div class="card fade-in">
-        <div class="card-label" style="color:var(--accent2)">🃏 カードゲーム</div>
-        <div style="text-align:center;font-size:1.05rem;font-weight:700;line-height:1.7;margin:12px 0 18px">
-          協力するか、出し抜くか、裏をかくか<br>
-          <span style="color:var(--accent2)">どれが自分っぽい？</span>
-        </div>
-        <div class="play-cards">
-          ${['red','blue','white'].map(key => {
-            const info = CARD_INFO[key];
-            return `<div style="display:flex;flex-direction:column;align-items:center;border-radius:16px;border:2px solid ${info.color};padding:14px 8px;gap:6px;flex:1;background:var(--surface2)">
-              <div style="font-size:2.4rem">${info.emoji}</div>
-              <div style="font-size:.9rem;font-weight:900;color:${info.color}">${info.name}</div>
-              <div style="font-size:.62rem;color:var(--sub);text-align:center;line-height:1.5">${info.rule.replace(/\n/g,'<br>')}</div>
-            </div>`;
-          }).join('')}
+        <div class="card-label" style="color:var(--accent2)">🃏 カードゲーム ルール説明</div>
+        <div style="font-size:.9rem;color:var(--sub);margin:10px 0 16px">次の画面で、どのカードを出すかを選択します。</div>
+        <div style="display:flex;flex-direction:column;gap:12px">
+          <div style="background:var(--surface2);border-radius:14px;padding:14px 16px">
+            <div style="font-size:.75rem;color:var(--blue);font-weight:700;letter-spacing:.05em;margin-bottom:4px">1. 協力する ▶ 🤝 市民</div>
+            <div style="font-size:.9rem;line-height:1.6">全員が市民を選んだら<br><span style="color:var(--teal);font-weight:700">全員で勝利。罰ゲーム無し。</span></div>
+          </div>
+          <div style="background:var(--surface2);border-radius:14px;padding:14px 16px">
+            <div style="font-size:.75rem;color:var(--red);font-weight:700;letter-spacing:.05em;margin-bottom:4px">2. 出し抜く ▶ ⚔️ 兵士</div>
+            <div style="font-size:.9rem;line-height:1.6">他の人が市民を選んでいて、<br>自分だけ兵士なら<span style="color:var(--accent2);font-weight:700">自分だけ勝利。</span></div>
+          </div>
+          <div style="background:var(--surface2);border-radius:14px;padding:14px 16px">
+            <div style="font-size:.75rem;color:var(--purple);font-weight:700;letter-spacing:.05em;margin-bottom:4px">3. 裏をかく ▶ 🔮 魔法使い</div>
+            <div style="font-size:.9rem;line-height:1.6">他の人が市民と兵士なら<br><span style="color:var(--accent2);font-weight:700">自分だけ勝利。</span></div>
+          </div>
         </div>
         <button class="next-btn" onclick="ackCardRules()" style="margin-top:20px;background:linear-gradient(135deg,var(--accent2),var(--accent))">
           準備OK！▶
