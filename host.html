@@ -469,6 +469,11 @@ function updateGUI(g) {
 // メッセージモード
 // ============================================================
 window.startMessage = async function() {
+  const n = Object.keys(participants).length;
+  if (n < 2) {
+    alert(`参加者が${n}人しかいません。メッセージモードは2人以上必要です。`);
+    return;
+  }
   mRound = 0;
   await db.ref('mode').set('message');
   startMessageRound();
