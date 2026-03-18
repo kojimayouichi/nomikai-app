@@ -355,7 +355,7 @@ function advanceQuestion() {
 
 function finishQuestion() {
   db.ref('question').set({ active: false });
-  db.ref('mode').set('idle');
+  db.ref('mode').set('end');
   document.getElementById('sRound').textContent = '-';
 }
 
