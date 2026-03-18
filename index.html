@@ -605,8 +605,8 @@ function renderCard() {
     return;
   }
 
-  // ルール説明画面（初回のみ）
-  if (!rulesAcknowledged) {
+  // ルール説明画面（ラウンド1かつ未確認のみ）
+  if (!rulesAcknowledged && (c.round || 1) === 1 && !c.results) {
     el.innerHTML = `
       <div class="card fade-in">
         <div class="card-label" style="color:var(--accent2)">🃏 カードゲーム</div>

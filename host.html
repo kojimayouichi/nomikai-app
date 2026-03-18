@@ -691,15 +691,17 @@ function updateAruanaUI(a) {
 db.ref('cardgame').on('value', snap => {
   const c = snap.val() || {};
   updateCardUI(c);
-  // 全員回答したら結果を計算
-  if (c.active && c.selections && c.participants && !c.results) {
+  // 全員回答したら結果を計算（リアルタイムのparticipants数を使用）
+  if (c.active && c.selections && !c.results) {
+    const pCount   = Object.keys(participants).length;
     const ansCount = Object.keys(c.selections).length;
-    if (ansCount >= c.participants) calcAndWriteCardResults(c);
+    if (pCount > 0 && ansCount >= pCount) calcAndWriteCardResults(c);
   }
-  // 全員nextReadyを押したら次ラウンドへ
-  if (c.results && c.nextReady && c.participants) {
+  // 全員nextReadyを押したら次ラウンドへ（リアルタイムのparticipants数を使用）
+  if (c.results && c.nextReady) {
+    const pCount     = Object.keys(participants).length;
     const readyCount = Object.keys(c.nextReady).length;
-    if (readyCount >= c.participants) advanceCardRound();
+    if (pCount > 0 && readyCount >= pCount) advanceCardRound();
   }
 });
 
