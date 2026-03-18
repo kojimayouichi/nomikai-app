@@ -416,7 +416,7 @@ function finalizeBuzzRound() {
 function finishGame() {
   if (gAutoTimer) { clearTimeout(gAutoTimer); gAutoTimer = null; }
   db.ref('game').set({ status: 'idle' });
-  db.ref('mode').set('idle');
+  db.ref('mode').set('end');
   document.getElementById('sRound').textContent = '-';
 }
 
