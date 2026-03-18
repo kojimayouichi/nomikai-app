@@ -491,11 +491,13 @@ function startMessageRound() {
   const n    = ids.length;
   if (n < 2) { finishMessage(); return; }
 
-  // 輪番割り当て: A→B, B→C, ..., N→A
+  // ラウンドごとにシフト量を変えて全員が違う相手に送れるように
+  // round1: shift=1(A→B,B→C…), round2: shift=2(A→C,B→D…)
+  const shift = Math.min(mRound, n - 1);
   const assignments = {};
   const nums        = {};
   ids.forEach((id, i) => {
-    assignments[id] = ids[(i + 1) % n];
+    assignments[id] = ids[(i + shift) % n];
     nums[id]        = i + 1;
   });
 
