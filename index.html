@@ -160,6 +160,7 @@ let drawState     = {};
 let amIDrawer     = false;
 let allStrokes    = {};
 let lastDrawRound = 0;
+let liveFlushTimer = null;
 
 // ============================================================
 // プレゼンス（参加者番号割り当て）
@@ -209,6 +210,7 @@ db.ref('mode').on('value', snap => {
     rulesAcknowledged = false;
     amIDrawer  = false;
     allStrokes = {};
+    if (liveFlushTimer) { clearInterval(liveFlushTimer); liveFlushTimer = null; }
     if (buzzTimerInterval) { clearInterval(buzzTimerInterval); buzzTimerInterval = null; }
   }
   render();
@@ -801,6 +803,10 @@ function redrawCanvas() {
   for (const key of Object.keys(allStrokes).sort()) {
     paintStroke(ctx, allStrokes[key], canvas.width, canvas.height);
   }
+  // ライブストローク（描いてる途中）をviewerに表示
+  if (!amIDrawer && drawState.live) {
+    paintStroke(ctx, drawState.live, canvas.width, canvas.height);
+  }
 }
 
 function paintStroke(ctx, pts, w, h) {
@@ -864,8 +870,17 @@ function attachDrawEvents(canvas) {
       const s = pts.map(n => Math.round(n * 1000) / 1000).join(',');
       db.ref('drawing/strokes').push(s);
     }
+    db.ref('drawing/live').set(null);
     pts = [];
   }
+
+  // 0.3秒ごとに描いてる途中のストロークをFirebaseに送信
+  if (liveFlushTimer) clearInterval(liveFlushTimer);
+  liveFlushTimer = setInterval(() => {
+    if (drawing && pts.length >= 4) {
+      db.ref('drawing/live').set(pts.map(n => Math.round(n * 1000) / 1000).join(','));
+    }
+  }, 300);
 
   canvas.addEventListener('mousedown',  onStart);
   canvas.addEventListener('mousemove',  onMove);

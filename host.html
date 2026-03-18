@@ -312,7 +312,43 @@ db.ref('mode').on('value', snap => {
   currentMode = snap.val() || 'idle';
   const modeLabels = { idle:'待機', question:'質問', game:'ゲーム', message:'メッセージ', end:'終了', aruana:'あるある', cardgame:'カード', drawing:'お絵かき' };
   document.getElementById('sMode').textContent = modeLabels[currentMode] || currentMode;
+  syncModeUI(currentMode);
 });
+
+// モード切替時にボタン有効/無効とバッジリセットを同期
+function syncModeUI(mode) {
+  const btnMap = {
+    question: 'qStartBtn', game: 'gStartBtn', message: 'mStartBtn',
+    aruana:   'aStartBtn', cardgame: 'cgStartBtn', drawing: 'dwStartBtn',
+  };
+  // 実行中モード以外のボタンを無効化
+  Object.entries(btnMap).forEach(([m, id]) => {
+    const btn = document.getElementById(id);
+    if (btn) btn.disabled = (mode !== 'idle' && mode !== m);
+  });
+  // 非アクティブなモードのバッジとステータスを初期状態にリセット
+  const resetMap = [
+    { mode: 'question', badge: 'qBadge', status: 'qStatus',     extra: 'qResultBars' },
+    { mode: 'game',     badge: 'gBadge', status: 'gResults',    extra: null },
+    { mode: 'message',  badge: 'mBadge', status: 'mAssignList', extra: null },
+    { mode: 'aruana',   badge: 'aBadge', status: 'aStatus',     extra: null },
+    { mode: 'cardgame', badge: 'cgBadge',status: 'cgStatus',    extra: null },
+    { mode: 'drawing',  badge: 'dwBadge',status: 'dwStatus',    extra: null },
+  ];
+  resetMap.forEach(({ mode: m, badge, status, extra }) => {
+    if (mode !== m) {
+      const b = document.getElementById(badge);
+      const s = document.getElementById(status);
+      if (b) { b.className = 'mode-badge mb-idle'; b.textContent = '● 待機中'; }
+      if (s) s.innerHTML = '';
+      if (extra) { const e = document.getElementById(extra); if (e) e.innerHTML = ''; }
+    }
+  });
+  // ラウンド表示もリセット
+  if (mode === 'idle' || mode === 'end') {
+    document.getElementById('sRound').textContent = '-';
+  }
+}
 
 db.ref('question').on('value', snap => {
   const q = snap.val() || {};
