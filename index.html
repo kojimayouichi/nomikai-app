@@ -270,9 +270,10 @@ db.ref('drawing').on('value', snap => {
   drawState = newState;
   const newAmIDrawer = newState.drawerId === myId;
   if (currentMode !== 'drawing') { amIDrawer = newAmIDrawer; return; }
-  const statusChanged = prevStatus !== newState.status;
+  const statusChanged  = prevStatus !== newState.status;
+  const drawerChanged  = newAmIDrawer !== amIDrawer;
   amIDrawer = newAmIDrawer;
-  if (roundChanged || statusChanged || !document.getElementById('drawCanvas')) {
+  if (roundChanged || statusChanged || drawerChanged || !document.getElementById('drawCanvas')) {
     render();
   } else if (!amIDrawer) {
     redrawCanvas();
