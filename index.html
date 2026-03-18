@@ -390,7 +390,7 @@ function renderBuzzDone(el, g) {
           ${isWinner?'🏆':isLast?'😢':'👍'}
         </button>
         <div class="result-banner ${isWinner?'win':isLast?'last':'lose'}">
-          ${isWinner ? '🎉 あなたが一番乗り！' : isLast ? '😭 一番遅かった…！' : '惜しかった！'}
+          ${isWinner ? `🎉 ${myNum}番・あなたが一番乗り！` : isLast ? '😭 一番遅かった…！' : '惜しかった！'}
         </div>
         ${isLast && odai ? `
           <div class="odai-box">
