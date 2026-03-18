@@ -639,9 +639,9 @@ function renderCard() {
   const isLast      = (c.round || 1) >= 3;
   const myInfo      = myCardVote ? CARD_INFO[myCardVote] : null;
 
-  // 結果表示
+  // 結果表示（自分が投票済み かつ results に自分のIDがある場合のみ）
   let resultsHtml = '';
-  if (c.results && c.nums && c.selections) {
+  if (voted && c.results && c.results[myId] !== undefined && c.nums && c.selections) {
     const myWin = c.results[myId] === 'win';
     const cardRows = Object.entries(c.nums)
       .sort((a, b) => a[1] - b[1])
@@ -693,8 +693,8 @@ function renderCard() {
         ${!allAnswered ? `<div style="text-align:center;color:var(--sub);font-size:.85rem;margin-top:10px">他の人の回答を待っています...</div>` : ''}
       `}
       ${resultsHtml}
-      ${allAnswered && voted && c.results && !myNextDone ? `<button class="next-btn" onclick="pressCardNext()" style="margin-top:14px">${isLast ? '終了' : '次のラウンドへ ▶'}</button>` : ''}
-      ${allAnswered && voted && c.results && myNextDone ? `<div style="text-align:center;color:var(--sub);font-size:.85rem;margin-top:14px">次のラウンドを待っています...</div>` : ''}
+      ${allAnswered && voted && c.results && c.results[myId] !== undefined && !myNextDone ? `<button class="next-btn" onclick="pressCardNext()" style="margin-top:14px">${isLast ? '終了' : '次のラウンドへ ▶'}</button>` : ''}
+      ${allAnswered && voted && c.results && c.results[myId] !== undefined && myNextDone ? `<div style="text-align:center;color:var(--sub);font-size:.85rem;margin-top:14px">次のラウンドを待っています...</div>` : ''}
     </div>`;
 }
 
