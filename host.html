@@ -256,7 +256,11 @@ let cardRound    = 0;    // カードゲームラウンド (0-2)
 let usedPenalties = [];  // 使用済み罰ゲームインデックス
 let drawRound    = 0;    // お絵かきラウンド (0-2)
 let drawUsed     = [];   // 使用済みお題インデックス
-let gAutoTimer   = null;
+let gAutoTimer    = null;
+let aruAdvTimer   = null;
+let cardAdvTimer  = null;
+let drawAdvTimer  = null;
+let advEndTimer   = null;
 
 // ============================================================
 // Firebase リスナー
@@ -484,7 +488,7 @@ function advanceAruana() {
   db.ref('aruana/active').once('value', snap => {
     if (!snap.val()) return;
     db.ref('aruana/active').set(false);
-    setTimeout(() => publishNextAruana(), 1500);
+    aruAdvTimer = setTimeout(() => { aruAdvTimer = null; publishNextAruana(); }, 1500);
   });
 }
 
@@ -594,7 +598,7 @@ function advanceCardRound() {
   db.ref('cardgame/active').once('value', snap => {
     if (!snap.val()) return;
     db.ref('cardgame/active').set(false);
-    setTimeout(() => publishNextCardRound(), 1500);
+    cardAdvTimer = setTimeout(() => { cardAdvTimer = null; publishNextCardRound(); }, 1500);
   });
 }
 
@@ -694,7 +698,7 @@ function advanceDrawRound() {
   db.ref('drawing/active').once('value', snap => {
     if (!snap.val()) return;
     db.ref('drawing/active').set(false);
-    setTimeout(() => publishNextDrawRound(), 1500);
+    drawAdvTimer = setTimeout(() => { drawAdvTimer = null; publishNextDrawRound(); }, 1500);
   });
 }
 
@@ -870,7 +874,7 @@ window.endAdventure = function() {
   // 敗北時はシンプルなゲームオーバー画面へ
   if (advCurrentState.status === 'defeat') {
     db.ref('adventure').update({ status: 'result', isDefeat: true });
-    setTimeout(() => db.ref('mode').set('end'), 4000);
+    advEndTimer = setTimeout(() => { advEndTimer = null; db.ref('mode').set('end'); }, 4000);
     return;
   }
 
@@ -923,7 +927,7 @@ window.endAdventure = function() {
       };
     }
     db.ref('adventure').update({ status:'result', compat, pairs, victoryRound, teamScore, teamLabel, teamRank });
-    setTimeout(() => db.ref('mode').set('end'), 3000);
+    advEndTimer = setTimeout(() => { advEndTimer = null; db.ref('mode').set('end'); }, 3000);
   });
 };
 
@@ -932,8 +936,12 @@ window.endAdventure = function() {
 // ============================================================
 window.resetMode = function() {
   if (!confirm('現在のモードをリセットしてidleに戻しますか？')) return;
-  if (gAutoTimer) { clearTimeout(gAutoTimer); gAutoTimer = null; }
-  if (advResultTimer) { clearTimeout(advResultTimer); advResultTimer = null; }
+  if (gAutoTimer)   { clearTimeout(gAutoTimer);   gAutoTimer   = null; }
+  if (advResultTimer){ clearTimeout(advResultTimer); advResultTimer = null; }
+  if (aruAdvTimer)  { clearTimeout(aruAdvTimer);  aruAdvTimer  = null; }
+  if (cardAdvTimer) { clearTimeout(cardAdvTimer); cardAdvTimer = null; }
+  if (drawAdvTimer) { clearTimeout(drawAdvTimer); drawAdvTimer = null; }
+  if (advEndTimer)  { clearTimeout(advEndTimer);  advEndTimer  = null; }
   db.ref('mode').set('idle');
   db.ref('game').set({ status: 'idle' });
   db.ref('aruana').set({ active: false });
