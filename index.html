@@ -968,6 +968,11 @@ function processAdvRound() {
       dmgToEnemy = Math.ceil(attackCount * 0.5);
       dmgToParty = 1;
       description = `🛡️ 全員がたたかう！→ 敵が防御して反撃！ダメージ ${dmgToEnemy}... おうえんまほうが必要だ！`;
+    } else if (supportCount > total / 2) {
+      dmgToEnemy = 1;
+      const counterHit = Math.random() < 0.5;
+      if (counterHit) dmgToParty = 1;
+      description = `✨ おうえんが多すぎる！こうげきする人数が足りない！ダメージ ${dmgToEnemy}${counterHit ? ' 反撃を受けた！' : ''}`;
     } else if (supportCount > 0 && attackCount > 0) {
       dmgToEnemy = attackCount * 3;
       description = `✨ おうえんまほう炸裂！${attackCount}人が大ダメージ！合計 ${dmgToEnemy}！`;
