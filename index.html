@@ -1005,11 +1005,10 @@ function processAdvRound() {
       }
     }
     if (healAmount > 0) {
-      const sorted = Object.entries(playerHP).filter(([,hp]) => hp > 0).sort(([,x],[,y]) => x - y);
-      if (sorted.length > 0) {
-        const [healUid] = sorted[0];
-        playerHP[healUid] = Math.min(maxPlayerHP, playerHP[healUid] + healAmount);
-      }
+      // 回復を選んだ人数に関わらず全員+1HP回復
+      Object.keys(playerHP).forEach(uid => {
+        if (playerHP[uid] > 0) playerHP[uid] = Math.min(maxPlayerHP, playerHP[uid] + 1);
+      });
     }
 
     const anyDefeated = Object.values(playerHP).some(hp => hp <= 0);

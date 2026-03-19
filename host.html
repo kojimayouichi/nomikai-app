@@ -182,7 +182,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
     <div class="card">
       <div class="card-accent ca-purple"></div>
       <div class="mode-badge mb-idle" id="advBadge">● 待機中</div>
-      <div style="font-size:.85rem;color:var(--sub);margin-bottom:14px">迷路を探索してアイテムを集め、みんなで敵を倒そう！行動パターンで相性診断。</div>
+      <div style="font-size:.85rem;color:var(--sub);margin-bottom:14px">RPG風のコマンドバトルでドラゴンを倒せ！行動パターンで相性診断。</div>
       <div class="btn-row">
         <button class="btn btn-purple" id="advStartBtn" onclick="startAdventure()">▶ アドベンチャー開始</button>
         <button class="btn btn-ghost btn-sm" onclick="resetMode()">リセット</button>
@@ -744,6 +744,10 @@ db.ref('adventure').on('value', snap => {
       // 勝利前：4秒後に自動で次のターンへ
       if (advResultTimer) clearTimeout(advResultTimer);
       advResultTimer = setTimeout(() => { advResultTimer = null; nextAdvTurn(); }, 4000);
+    } else if (a.status === 'victory') {
+      // 勝利：3秒後に自動で相性発表へ
+      if (advResultTimer) clearTimeout(advResultTimer);
+      advResultTimer = setTimeout(() => { advResultTimer = null; endAdventure(); }, 3000);
     } else if (a.status === 'defeat') {
       // 敗北：3秒後に自動でゲームオーバー画面へ
       if (advResultTimer) clearTimeout(advResultTimer);
