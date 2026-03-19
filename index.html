@@ -781,7 +781,7 @@ function renderAdventure() {
       <div class="card-label" style="color:var(--purple)">⚔️ コマンドRPG ${a.round?`ターン${a.round}`:''}</div>
       <!-- 敵 -->
       <div style="text-align:center;margin-bottom:12px">
-        <img src="dragon.png" style="width:250px;height:250px;object-fit:contain;margin-bottom:4px;image-rendering:pixelated">
+        <img src="dragon.png" style="width:200px;height:240px;object-fit:contain;margin-bottom:4px;image-rendering:pixelated">
         <div style="font-size:.78rem;font-weight:700;margin-bottom:4px">ドラゴン</div>
         <div style="font-size:.65rem;color:var(--red);margin-bottom:4px">HP ${eHP}/${maxEHP}</div>
         <div style="height:10px;background:var(--surface2);border-radius:100px;overflow:hidden;margin:0 16px">
@@ -966,7 +966,7 @@ function processAdvRound() {
       description = `😅 誰も攻撃しなかった... 敵が反撃！`;
     } else if (attackCount === total) {
       dmgToEnemy = Math.ceil(attackCount * 0.5);
-      description = `🛡️ 全員がたたかう！→ 敵が防御！ダメージ ${dmgToEnemy}`;
+      description = `🛡️ 全員がたたかう！→ 敵が防御！ダメージ ${dmgToEnemy}... おうえんまほうが必要だ！`;
     } else if (supportCount > 0 && attackCount > 0) {
       dmgToEnemy = attackCount * 3;
       description = `✨ おうえんまほう炸裂！${attackCount}人が大ダメージ！合計 ${dmgToEnemy}！`;
