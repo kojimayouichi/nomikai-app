@@ -635,7 +635,8 @@ function renderDraw() {
       }
       <div class="draw-wrap" id="drawWrap"><canvas id="drawCanvas"></canvas></div>
       ${amIDrawer && !isCorrect
-        ? `<button onclick="clearDrawCanvas()" style="width:100%;margin-top:8px;padding:10px;border-radius:12px;border:1.5px solid var(--border);background:var(--surface2);color:var(--sub);font-family:inherit;font-size:.85rem;font-weight:700;cursor:pointer">🗑️ 全消し</button>`
+        ? `<button onclick="clearDrawCanvas()" style="width:100%;margin-top:8px;padding:10px;border-radius:12px;border:1.5px solid var(--border);background:var(--surface2);color:var(--sub);font-family:inherit;font-size:.85rem;font-weight:700;cursor:pointer">🗑️ 全消し</button>
+           <button onclick="drawerMarkCorrect()" class="next-btn" style="margin-top:8px;background:linear-gradient(135deg,var(--teal),#04a87e);color:#0a2a20">✅ 正解！</button>`
         : ''}
       ${isCorrect ? `
         <div class="result-banner win" style="margin-top:12px">🎉 正解！お題は「${d.topic}」でした！</div>
@@ -762,6 +763,10 @@ window.clearDrawCanvas = function() {
 
 window.pressDrawNext = function() {
   db.ref('drawing/nextReady/' + myId).set(true);
+};
+
+window.drawerMarkCorrect = function() {
+  db.ref('drawing').update({ status: 'correct' });
 };
 
 // ============================================================
