@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>🍺 のみかい</title>
+<title>🍺 0320</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;700;900&family=Kaisei+Opti:wght@400;700&display=swap');
 :root {
@@ -61,21 +61,6 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 .odai-box{width:100%;padding:16px;border-radius:16px;background:rgba(255,209,102,.08);border:1.5px solid rgba(255,209,102,.3);text-align:center}
 .odai-label{font-size:.7rem;color:var(--accent2);letter-spacing:.15em;margin-bottom:8px;font-weight:700}
 .odai-text{font-size:1.1rem;font-weight:700;line-height:1.5}
-/* メッセージ */
-.msg-target-box{width:100%;padding:20px;border-radius:16px;background:rgba(72,149,239,.08);border:1.5px solid rgba(72,149,239,.3);text-align:center;margin-bottom:14px}
-.msg-target-label{font-size:.7rem;color:var(--blue);letter-spacing:.15em;margin-bottom:8px;font-weight:700}
-.msg-target-num{font-size:2.5rem;font-weight:900;font-family:'Kaisei Opti',serif;color:var(--accent2)}
-.msg-target-sub{font-size:.85rem;color:var(--sub);margin-top:4px}
-.msg-textarea{width:100%;background:var(--surface2);border:1.5px solid var(--border);border-radius:14px;padding:14px;color:var(--text);font-family:'Zen Kaku Gothic New',sans-serif;font-size:1rem;resize:none;min-height:100px;outline:none;transition:border-color .2s}
-.msg-textarea:focus{border-color:var(--blue)}
-.msg-textarea::placeholder{color:var(--sub)}
-.msg-send-btn{width:100%;padding:16px;border-radius:14px;border:none;background:linear-gradient(135deg,var(--blue),#2d6fd4);color:white;font-family:'Zen Kaku Gothic New',sans-serif;font-size:1rem;font-weight:700;cursor:pointer;margin-top:12px;transition:all .2s}
-.msg-send-btn:active{transform:scale(.97)}
-.msg-send-btn:disabled{opacity:.4;cursor:default}
-.msg-received-box{width:100%;padding:20px;border-radius:16px;background:rgba(6,214,160,.08);border:1.5px solid rgba(6,214,160,.3);margin-top:14px}
-.msg-received-label{font-size:.7rem;color:var(--teal);letter-spacing:.15em;margin-bottom:10px;font-weight:700}
-.msg-received-text{font-size:1.1rem;line-height:1.7;word-break:break-all}
-.msg-received-empty{font-size:.9rem;color:var(--sub);text-align:center;padding:10px}
 /* カードゲーム */
 .play-cards{display:flex;gap:10px;justify-content:center;margin-top:12px}
 .play-card{display:flex;flex-direction:column;align-items:center;justify-content:center;border-radius:16px;border:2.5px solid;cursor:pointer;padding:16px 8px;gap:6px;transition:transform .15s,box-shadow .15s;background:var(--surface2);flex:1;min-height:156px}
@@ -104,7 +89,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 <body>
 <div class="app">
   <header class="header">
-    <div class="header-title">🍺 のみかい</div>
+    <div class="header-title">🍺 0320</div>
     <div style="display:flex;align-items:center;gap:8px">
       <span style="font-size:.72rem;color:var(--sub)" id="headerSub">接続中...</span>
       <div class="status-dot"></div>
@@ -129,7 +114,6 @@ const myId = 'c_' + Math.random().toString(36).slice(2, 9);
 let myNum      = null;   // 参加者番号（1始まり）
 let currentMode = 'idle';
 let myBuzzed   = false;
-let msgSent    = false;
 let buzzTimerInterval = null;
 let buzzCountdown = 0;
 let participantCount = 0;
@@ -187,7 +171,6 @@ db.ref('mode').on('value', snap => {
     currentMode = mode;
     // モード切替時に個人状態リセット
     myBuzzed  = false;
-    msgSent   = false;
     myAruVote = null;
     myCardVote        = null;
     rulesAcknowledged = false;
@@ -203,8 +186,6 @@ db.ref('mode').on('value', snap => {
 // 各データ監視
 // ============================================================
 let gState  = {};
-let mState  = {};
-
 db.ref('game').on('value', snap => {
   gState = snap.val() || {};
   // ラウンドが変わったら早押し状態をリセット
@@ -214,8 +195,6 @@ db.ref('game').on('value', snap => {
   }
   if (currentMode === 'game') renderGame();
 });
-db.ref('message').on('value',  snap => { mState = snap.val() || {}; if (currentMode === 'message')  render(); });
-
 let aruState = {};
 db.ref('aruana').on('value', snap => {
   aruState = snap.val() || {};
@@ -261,7 +240,6 @@ db.ref('drawing').on('value', snap => {
 function render() {
   if      (currentMode === 'idle')     renderIdle();
   else if (currentMode === 'game')     renderGame();
-  else if (currentMode === 'message')  renderMessage();
   else if (currentMode === 'aruana')   renderAruana();
   else if (currentMode === 'cardgame')  renderCard();
   else if (currentMode === 'drawing')   renderDraw();
@@ -393,71 +371,6 @@ window.doBuzz = function() {
   const btn = document.getElementById('buzzBtn');
   if (btn) btn.disabled = true;
   db.ref('game/results/' + myId).set({ ts: firebase.database.ServerValue.TIMESTAMP, num: myNum || 0 });
-};
-
-// ===== メッセージ =====
-function renderMessage() {
-  const m  = mState;
-  const el = document.getElementById('mainContent');
-  if (!m || !m.assignments) {
-    el.innerHTML = `<div class="waiting fade-in"><div class="waiting-icon">💬</div><div class="waiting-text">準備中...</div></div>`;
-    return;
-  }
-
-  const round      = m.round || 1;
-  const targetId   = (m.assignments || {})[myId];
-  const targetNum  = targetId ? getParticipantNum(targetId, m) : '?';
-  const received   = targetId ? (m.messages || {})[myId] : null; // 自分宛のメッセージ
-  const mySentMsg  = (m.messages || {})[targetId];               // 自分が送ったメッセージ（targetId宛に保存）
-
-  // 実際には「自分宛」= assignments で自分をtargetにしている人のメッセージ
-  const incomingMsg = getIncomingMessage(m);
-
-  el.innerHTML = `
-    <div class="card blue fade-in">
-      <div class="card-label">💬 匿名メッセージ (${round}/2回目)</div>
-      <div class="msg-target-box">
-        <div class="msg-target-label">メッセージを送る相手</div>
-        <div class="msg-target-num">${targetNum}番</div>
-        <div class="msg-target-sub">相手には誰からか分かりません</div>
-      </div>
-      ${!msgSent ? `
-        <textarea class="msg-textarea" id="msgInput" placeholder="${targetNum}番さんへのメッセージを入力..."></textarea>
-        <button class="msg-send-btn" onclick="sendMsg('${targetId}')">送信する ▶</button>
-      ` : `
-        <div style="text-align:center;color:var(--sub);font-size:.85rem;padding:10px">メッセージを送りました！</div>
-      `}
-    </div>
-    <div class="card blue fade-in">
-      <div class="card-label">📩 届いたメッセージ</div>
-      ${incomingMsg
-        ? `<div class="msg-received-box"><div class="msg-received-label">匿名より</div><div class="msg-received-text">${escHtml(incomingMsg)}</div></div>`
-        : `<div class="msg-received-empty">まだ届いていません...</div>`}
-    </div>`;
-}
-
-function getParticipantNum(id, m) {
-  const nums = m.nums || {};
-  return nums[id] || id.slice(-3);
-}
-
-function getIncomingMessage(m) {
-  // assignments: { senderId: targetId }
-  // 自分(myId)をtargetにしているsenderを探す
-  const assignments = m.assignments || {};
-  const messages    = m.messages    || {};
-  const senderEntry = Object.entries(assignments).find(([sender, target]) => target === myId);
-  if (!senderEntry) return null;
-  return messages[senderEntry[0]] || null;
-}
-
-window.sendMsg = function(targetId) {
-  const input = document.getElementById('msgInput');
-  const text  = input ? input.value.trim() : '';
-  if (!text) return;
-  msgSent = true;
-  db.ref('message/messages/' + myId).set(text);
-  render();
 };
 
 // ===== あるある？ないない？ =====
@@ -806,9 +719,6 @@ window.pressDrawNext = function() {
 // ============================================================
 // ユーティリティ
 // ============================================================
-function escHtml(s) {
-  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-}
 function launchConfetti() {
   const wrap = document.getElementById('confettiWrap');
   const cols = ['#ff6b35','#ffd166','#06d6a0','#4895ef','#ff9ff3','#fff'];

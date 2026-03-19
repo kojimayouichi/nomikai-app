@@ -131,21 +131,6 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
     </div>
   </div>
 
-  <!-- メッセージ -->
-  <div class="section">
-    <div class="section-title">💬 匿名メッセージ</div>
-    <div class="card">
-      <div class="card-accent ca-blue"></div>
-      <div class="mode-badge mb-idle" id="mBadge">● 待機中</div>
-      <div style="font-size:.85rem;color:var(--sub);margin-bottom:14px">参加者を輪番に割り当て、匿名でメッセージを送り合います。2回戦制。</div>
-      <div class="btn-row">
-        <button class="btn btn-blue" id="mStartBtn" onclick="startMessage()">▶ メッセージモード開始</button>
-        <button class="btn btn-ghost btn-sm" onclick="resetMode()">リセット</button>
-      </div>
-      <div class="assign-list" id="mAssignList"></div>
-    </div>
-  </div>
-
   <!-- あるある？ないない？ -->
   <div class="section">
     <div class="section-title">🙋 あるある？ないない？</div>
@@ -250,7 +235,6 @@ const ARUANA = [
 let participants = {};
 let currentMode  = 'idle';
 let gRound       = 0;    // ゲームラウンド (0-1)
-let mRound       = 0;    // メッセージラウンド (0-1)
 let aruRound     = 0;    // あるあるラウンド (0-2)
 let aruUsed      = [];   // 使用済みお題インデックス
 let cardRound    = 0;    // カードゲームラウンド (0-2)
@@ -279,7 +263,7 @@ db.ref('mode').on('value', snap => {
 // モード切替時にボタン有効/無効とバッジリセットを同期
 function syncModeUI(mode) {
   const btnMap = {
-    game: 'gStartBtn', message: 'mStartBtn',
+    game: 'gStartBtn',
     aruana: 'aStartBtn', cardgame: 'cgStartBtn', drawing: 'dwStartBtn',
   };
   // 実行中モード以外のボタンを無効化
@@ -290,7 +274,6 @@ function syncModeUI(mode) {
   // 非アクティブなモードのバッジとステータスを初期状態にリセット
   const resetMap = [
     { mode: 'game',     badge: 'gBadge', status: 'gResults',    extra: null },
-    { mode: 'message',  badge: 'mBadge', status: 'mAssignList', extra: null },
     { mode: 'aruana',   badge: 'aBadge', status: 'aStatus',     extra: null },
     { mode: 'cardgame', badge: 'cgBadge',status: 'cgStatus',    extra: null },
     { mode: 'drawing',  badge: 'dwBadge',status: 'dwStatus',    extra: null },
@@ -314,20 +297,6 @@ db.ref('game').on('value', snap => {
   const g = snap.val() || {};
   updateGUI(g);
   // 全員がbuzzしたらdoneにする（または一定時間後）
-});
-
-db.ref('message').on('value', snap => {
-  const m = snap.val() || {};
-  updateMUI(m);
-  // 全員送信済みなら次ラウンドへ
-  if (m.assignments && m.messages) {
-    const assignCount = Object.keys(m.assignments).length;
-    const msgCount    = Object.keys(m.messages).length;
-    if (assignCount > 0 && msgCount >= assignCount && !m.roundDone) {
-      db.ref('message/roundDone').set(true);
-      setTimeout(() => advanceMessage(), 8000); // 8秒後に次へ
-    }
-  }
 });
 
 // ============================================================
@@ -445,91 +414,6 @@ function updateGUI(g) {
     badge.textContent = '● 待機中';
     startBtn.disabled = false;
     resEl.innerHTML   = '';
-  }
-}
-
-// ============================================================
-// メッセージモード
-// ============================================================
-window.startMessage = async function() {
-  const n = Object.keys(participants).length;
-  if (n < 2) {
-    alert(`参加者が${n}人しかいません。メッセージモードは2人以上必要です。`);
-    return;
-  }
-  mRound = 0;
-  await db.ref('mode').set('message');
-  startMessageRound();
-};
-
-function startMessageRound() {
-  mRound++;
-  if (mRound > 2) {
-    finishMessage();
-    return;
-  }
-  document.getElementById('sRound').textContent = mRound + '/2';
-
-  const ids  = Object.keys(participants).sort();
-  const n    = ids.length;
-  if (n < 2) { finishMessage(); return; }
-
-  // ラウンドごとにシフト量を変えて全員が違う相手に送れるように
-  // round1: shift=1(A→B,B→C…), round2: shift=2(A→C,B→D…)
-  const shift = Math.min(mRound, n - 1);
-  const assignments = {};
-  const nums        = {};
-  ids.forEach((id, i) => {
-    assignments[id] = ids[(i + shift) % n];
-    nums[id]        = i + 1;
-  });
-
-  db.ref('message').set({
-    round:       mRound,
-    assignments,
-    nums,
-    messages:    {},
-    roundDone:   false
-  });
-}
-
-function advanceMessage() {
-  db.ref('message/roundDone').once('value', snap => {
-    if (!snap.val()) return;
-    if (mRound < 2) startMessageRound();
-    else finishMessage();
-  });
-}
-
-function finishMessage() {
-  db.ref('message').set({ active: false });
-  db.ref('mode').set('idle');
-  document.getElementById('sRound').textContent = '-';
-}
-
-function updateMUI(m) {
-  const badge   = document.getElementById('mBadge');
-  const listEl  = document.getElementById('mAssignList');
-  const startBtn= document.getElementById('mStartBtn');
-
-  if (currentMode === 'message' && m.assignments) {
-    badge.className   = 'mode-badge mb-active';
-    badge.textContent = `▶ メッセージ中 ${m.round || 1}/2回目`;
-    startBtn.disabled = true;
-    const msgs    = m.messages || {};
-    const nums    = m.nums     || {};
-    listEl.innerHTML = Object.entries(m.assignments).map(([from, to]) => {
-      const sent = !!msgs[from];
-      return `<div class="assign-row">
-        <span style="color:var(--sub)">${nums[from] || '?'}番 → ${nums[to] || '?'}番</span>
-        <span style="margin-left:auto;font-size:.75rem;color:${sent?'var(--teal)':'var(--sub)'}">${sent?'✅ 送信済み':'未送信'}</span>
-      </div>`;
-    }).join('');
-  } else {
-    badge.className   = 'mode-badge mb-idle';
-    badge.textContent = '● 待機中';
-    startBtn.disabled = false;
-    listEl.innerHTML  = '';
   }
 }
 
@@ -829,7 +713,6 @@ window.resetMode = function() {
   if (gAutoTimer) { clearTimeout(gAutoTimer); gAutoTimer = null; }
   db.ref('mode').set('idle');
   db.ref('game').set({ status: 'idle' });
-  db.ref('message').set({ active: false });
   db.ref('aruana').set({ active: false });
   db.ref('cardgame').set({ active: false });
   db.ref('drawing').set({ active: false });
