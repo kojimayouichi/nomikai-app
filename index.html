@@ -36,20 +36,6 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 .card.teal .card-label{color:var(--teal)}
 .card.blue .card-label{color:var(--blue)}
 .card-title{font-family:'Kaisei Opti',serif;font-size:1.25rem;font-weight:700;line-height:1.5;margin-bottom:16px}
-/* 質問 */
-.choices{display:flex;flex-direction:column;gap:10px}
-.choice-btn{width:100%;padding:14px 16px;border-radius:14px;border:1.5px solid var(--border);background:var(--surface2);color:var(--text);font-family:'Zen Kaku Gothic New',sans-serif;font-size:1rem;font-weight:700;cursor:pointer;text-align:left;display:flex;align-items:center;justify-content:space-between;position:relative;overflow:hidden;transition:all .2s}
-.choice-btn::before{content:'';position:absolute;left:0;top:0;bottom:0;width:0;background:rgba(255,107,53,.15);transition:width .5s ease}
-.choice-btn.voted::before{width:var(--pct)}
-.choice-btn.selected{border-color:var(--accent);background:rgba(255,107,53,.12)}
-.choice-btn:disabled{cursor:default}
-.choice-btn:active:not(:disabled){transform:scale(.98)}
-.choice-text{position:relative;z-index:1;flex:1}
-.choice-meta{position:relative;z-index:1;display:flex;align-items:center;gap:6px;min-width:70px;justify-content:flex-end}
-.choice-pct{font-size:.85rem;color:var(--accent2);font-weight:700;min-width:36px;text-align:right}
-.choice-count{font-size:.8rem;color:var(--sub)}
-.choice-check{color:var(--accent)}
-.q-progress{font-size:.75rem;color:var(--sub);text-align:center;margin-bottom:10px}
 /* 次へボタン */
 .next-btn{width:100%;padding:16px;border-radius:16px;border:none;background:linear-gradient(135deg,var(--accent),#e05520);color:white;font-family:'Zen Kaku Gothic New',sans-serif;font-size:1rem;font-weight:700;cursor:pointer;margin-top:14px;transition:all .2s}
 .next-btn:active{transform:scale(.97)}
@@ -142,13 +128,11 @@ const db = firebase.database();
 const myId = 'c_' + Math.random().toString(36).slice(2, 9);
 let myNum      = null;   // 参加者番号（1始まり）
 let currentMode = 'idle';
-let myVote     = null;
 let myBuzzed   = false;
 let msgSent    = false;
 let buzzTimerInterval = null;
 let buzzCountdown = 0;
 let participantCount = 0;
-let lastQRound = 0;
 let lastGRound = 0;
 let lastAruRound = 0;
 let myAruVote = null;
@@ -202,7 +186,6 @@ db.ref('mode').on('value', snap => {
   if (mode !== currentMode) {
     currentMode = mode;
     // モード切替時に個人状態リセット
-    myVote    = null;
     myBuzzed  = false;
     msgSent   = false;
     myAruVote = null;
@@ -219,19 +202,9 @@ db.ref('mode').on('value', snap => {
 // ============================================================
 // 各データ監視
 // ============================================================
-let qState  = {};
 let gState  = {};
 let mState  = {};
 
-db.ref('question').on('value', snap => {
-  qState = snap.val() || {};
-  // ラウンドが変わったら投票状態をリセット
-  if (qState.round && qState.round !== lastQRound) {
-    lastQRound = qState.round;
-    myVote = null;
-  }
-  if (currentMode === 'question') render();
-});
 db.ref('game').on('value', snap => {
   gState = snap.val() || {};
   // ラウンドが変わったら早押し状態をリセット
@@ -287,7 +260,6 @@ db.ref('drawing').on('value', snap => {
 // ============================================================
 function render() {
   if      (currentMode === 'idle')     renderIdle();
-  else if (currentMode === 'question') renderQuestion();
   else if (currentMode === 'game')     renderGame();
   else if (currentMode === 'message')  renderMessage();
   else if (currentMode === 'aruana')   renderAruana();
@@ -308,76 +280,6 @@ function renderIdle() {
       <div class="waiting-text">ホストがモードを<br>選ぶまで待ってね！</div>
     </div>`;
 }
-
-// ===== 質問 =====
-function renderQuestion() {
-  const q     = qState;
-  const el    = document.getElementById('mainContent');
-  const round = q.round || 1;
-  const total = 3;
-
-  if (!q.active || !q.text) {
-    el.innerHTML = `<div class="waiting fade-in"><div class="waiting-icon">❓</div><div class="waiting-text">質問を読み込み中...</div></div>`;
-    return;
-  }
-
-  const votes    = q.votes || {};
-  const totalV   = Object.values(votes).reduce((s,v) => s+v, 0);
-  const answered = q.answered || 0;
-  const participants = q.participants || 1;
-  const allAnswered  = answered >= participants;
-  const showed   = myVote !== null;
-
-  // 全員回答済み or 自分が回答済みなら集計表示
-  const showResult = showed;
-
-  const choices = (q.choices || []).map((text, i) => {
-    const count = votes[i] || 0;
-    const pct   = totalV > 0 ? Math.round(count / totalV * 100) : 0;
-    const isMine = String(myVote) === String(i);
-    return `
-      <button class="choice-btn ${showResult?'voted':''} ${isMine?'selected':''}"
-        style="--pct:${pct}%"
-        onclick="castVote(${i})"
-        ${showed?'disabled':''}>
-        <span class="choice-text">${text}</span>
-        <span class="choice-meta">
-          ${showResult ? `<span class="choice-pct">${pct}%</span><span class="choice-count">${count}人</span>` : ''}
-          ${isMine ? '<span class="choice-check">✓</span>' : ''}
-        </span>
-      </button>`;
-  }).join('');
-
-  // 次へボタン：全員回答済み かつ 自分が回答済みの場合のみ表示
-  const canNext    = allAnswered && showed;
-  const myNextDone = (q.nextReady || {})[myId];
-
-  el.innerHTML = `
-    <div class="card fade-in">
-      <div class="card-label">❓ 究極の選択 (${round}/${total})</div>
-      <div class="q-progress">${answered}/${participants}人が回答済み</div>
-      <div class="card-title">${q.text}</div>
-      <div class="choices">${choices}</div>
-      ${showResult ? `<div style="font-size:.75rem;color:var(--sub);margin-top:10px;text-align:center">合計 ${totalV} 票</div>` : ''}
-      ${canNext && !myNextDone ? `<button class="next-btn" onclick="pressNext()">${round >= total ? '終了' : '次の質問へ ▶'}</button>` : ''}
-      ${canNext && myNextDone  ? `<div style="text-align:center;color:var(--sub);font-size:.85rem;margin-top:14px">次の質問を待っています...</div>` : ''}
-      ${!allAnswered && showed ? `<div style="text-align:center;color:var(--sub);font-size:.85rem;margin-top:14px">他の人の回答を待っています...</div>` : ''}
-    </div>`;
-}
-
-window.castVote = function(i) {
-  if (myVote !== null) return;
-  myVote = i;
-  // 票数をトランザクションで加算
-  db.ref('question/votes/' + i).transaction(cur => (cur || 0) + 1);
-  // 回答者数カウント
-  db.ref('question/answered').transaction(cur => (cur || 0) + 1);
-  render();
-};
-
-window.pressNext = function() {
-  db.ref('question/nextReady/' + myId).set(true);
-};
 
 // ===== ゲーム =====
 function renderGame() {

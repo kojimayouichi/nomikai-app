@@ -116,22 +116,6 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
     </div>
   </div>
 
-  <!-- 質問ゲーム -->
-  <div class="section">
-    <div class="section-title">❓ 質問ゲーム</div>
-    <div class="card">
-      <div class="card-accent ca-orange"></div>
-      <div class="mode-badge mb-idle" id="qBadge">● 待機中</div>
-      <div style="font-size:.85rem;color:var(--sub);margin-bottom:14px">究極の選択を3問ランダム出題。全員回答→集計→次へ、を繰り返します。</div>
-      <div class="btn-row">
-        <button class="btn btn-primary" id="qStartBtn" onclick="startQuestion()">▶ 質問モード開始</button>
-        <button class="btn btn-ghost btn-sm" onclick="resetMode()">リセット</button>
-      </div>
-      <div id="qStatus" style="margin-top:14px"></div>
-      <div class="result-bars" id="qResultBars"></div>
-    </div>
-  </div>
-
   <!-- 早押しゲーム -->
   <div class="section">
     <div class="section-title">🔴 早押しゲーム</div>
@@ -222,29 +206,6 @@ const db = firebase.database();
 // ============================================================
 // 質問データ
 // ============================================================
-const QUESTIONS = [
-  { text:'親友と好きな人が被ったら……',        choices:['譲る','譲らない'],                          cat:'恋愛' },
-  { text:'付き合うなら……',                     choices:['性格の悪い美男美女','性格の良い不細工'],    cat:'恋愛' },
-  { text:'選ぶなら……',                         choices:['誰にでも優しい人','自分にだけ優しい人'],    cat:'恋愛' },
-  { text:'恋人にするなら……',                   choices:['お金にルーズな人','時間にルーズな人'],      cat:'恋愛' },
-  { text:'究極のパートナーは……',               choices:['何でも許してくれる人','叱ってくれる人'],    cat:'恋愛' },
-  { text:'選ぶなら……',                         choices:['元恋人が100人いる人','0人の人'],            cat:'恋愛' },
-  { text:'もらえるなら……',                     choices:['確実にもらえる1,000万円','1/2で1億円'],     cat:'金銭' },
-  { text:'なれるなら……',                       choices:['嫌われ者の大金持ち','愛される貧乏人'],      cat:'金銭' },
-  { text:'お金で1つ買うなら……',               choices:['健康','時間'],                              cat:'金銭' },
-  { text:'自分がなるなら……',                   choices:['時間のない億万長者','時間のある貧乏人'],    cat:'金銭' },
-  { text:'生き残れるのは……',                   choices:['全人類が滅亡','自分と大切な人だけ生き残る'],cat:'人生' },
-  { text:'欲しい能力は……',                     choices:['未来に行ける能力','過去に行ける能力'],      cat:'人生' },
-  { text:'どちらか片方だけなら……',             choices:['結婚を選ぶ','出世を選ぶ'],                  cat:'人生' },
-  { text:'知りたいのは……',                     choices:['自分の命日','自分の死に方'],                cat:'人生' },
-  { text:'望む人生は……',                       choices:['平凡で長生き','短命でも激動の人生'],        cat:'人生' },
-  { text:'働くなら……',                         choices:['安くてやりがいのある仕事','高いがやりがいなし'],cat:'仕事' },
-  { text:'部下にするなら……',                   choices:['有能だが揉める人','スキル低いが素直な人'],  cat:'仕事' },
-  { text:'どちらの環境がいい？',               choices:['田舎で年収1,000万円','都会で年収500万円'],  cat:'仕事' },
-  { text:'上司にするなら……',                   choices:['性格が合うが仕事できない','きつくて仕事できる'],cat:'仕事' },
-  { text:'月20万不労所得が入るなら……',         choices:['今後も働く','働かない'],                    cat:'仕事' },
-];
-
 // 早押しお題
 const ODAI = [
   '勝った人のいいところを1つ言ってください',
@@ -279,6 +240,8 @@ const ARUANA = [
   '会社や学校をサボった理由、嘘ついたことがある',
   '元カレ・元カノのSNSをこっそり見たことがある',
   '実は惚れっぽい',
+  '付き合うなら性格が悪くても顔がいい人がいい',
+  'お金で一つ買うなら健康より時間',
 ];
 
 // ============================================================
@@ -286,8 +249,6 @@ const ARUANA = [
 // ============================================================
 let participants = {};
 let currentMode  = 'idle';
-let qUsed        = [];   // 使用済み質問インデックス
-let qRound       = 0;    // 質問ラウンド (0-2)
 let gRound       = 0;    // ゲームラウンド (0-1)
 let mRound       = 0;    // メッセージラウンド (0-1)
 let aruRound     = 0;    // あるあるラウンド (0-2)
@@ -318,8 +279,8 @@ db.ref('mode').on('value', snap => {
 // モード切替時にボタン有効/無効とバッジリセットを同期
 function syncModeUI(mode) {
   const btnMap = {
-    question: 'qStartBtn', game: 'gStartBtn', message: 'mStartBtn',
-    aruana:   'aStartBtn', cardgame: 'cgStartBtn', drawing: 'dwStartBtn',
+    game: 'gStartBtn', message: 'mStartBtn',
+    aruana: 'aStartBtn', cardgame: 'cgStartBtn', drawing: 'dwStartBtn',
   };
   // 実行中モード以外のボタンを無効化
   Object.entries(btnMap).forEach(([m, id]) => {
@@ -328,7 +289,6 @@ function syncModeUI(mode) {
   });
   // 非アクティブなモードのバッジとステータスを初期状態にリセット
   const resetMap = [
-    { mode: 'question', badge: 'qBadge', status: 'qStatus',     extra: 'qResultBars' },
     { mode: 'game',     badge: 'gBadge', status: 'gResults',    extra: null },
     { mode: 'message',  badge: 'mBadge', status: 'mAssignList', extra: null },
     { mode: 'aruana',   badge: 'aBadge', status: 'aStatus',     extra: null },
@@ -349,16 +309,6 @@ function syncModeUI(mode) {
     document.getElementById('sRound').textContent = '-';
   }
 }
-
-db.ref('question').on('value', snap => {
-  const q = snap.val() || {};
-  updateQUI(q);
-  // 全員nextReady押したら次の質問へ自動進行
-  if (q.active && q.nextReady && q.participants) {
-    const readyCount = Object.keys(q.nextReady).length;
-    if (readyCount >= q.participants) advanceQuestion();
-  }
-});
 
 db.ref('game').on('value', snap => {
   const g = snap.val() || {};
@@ -395,90 +345,6 @@ window.addEventListener('load', () => {
     document.getElementById('qrCanvas').style.display = 'none';
   }
 });
-
-// ============================================================
-// 質問モード
-// ============================================================
-window.startQuestion = async function() {
-  qUsed  = [];
-  qRound = 0;
-  await db.ref('mode').set('question');
-  publishNextQuestion();
-};
-
-function publishNextQuestion() {
-  if (qRound >= 3) {
-    // 3問終了
-    finishQuestion();
-    return;
-  }
-  // 未使用の質問をランダム選択
-  const available = QUESTIONS.map((_, i) => i).filter(i => !qUsed.includes(i));
-  const idx       = available[Math.floor(Math.random() * available.length)];
-  qUsed.push(idx);
-  qRound++;
-
-  const pCount = Object.keys(participants).length;
-  db.ref('question').set({
-    active:       true,
-    round:        qRound,
-    text:         QUESTIONS[idx].text,
-    choices:      QUESTIONS[idx].choices,
-    cat:          QUESTIONS[idx].cat,
-    votes:        {},
-    answered:     0,
-    participants: pCount,
-    nextReady:    {}
-  });
-  document.getElementById('sRound').textContent = qRound + '/3';
-}
-
-function advanceQuestion() {
-  // 連続呼び出し防止
-  db.ref('question/active').once('value', snap => {
-    if (!snap.val()) return;
-    db.ref('question/active').set(false);
-    setTimeout(() => publishNextQuestion(), 1500);
-  });
-}
-
-function finishQuestion() {
-  db.ref('question').set({ active: false });
-  db.ref('mode').set('end');
-  document.getElementById('sRound').textContent = '-';
-}
-
-function updateQUI(q) {
-  const badge   = document.getElementById('qBadge');
-  const statusEl= document.getElementById('qStatus');
-  const barsEl  = document.getElementById('qResultBars');
-  const startBtn= document.getElementById('qStartBtn');
-
-  if (currentMode === 'question' && q.active) {
-    badge.className   = 'mode-badge mb-active';
-    badge.textContent = `▶ 質問中 ${q.round || 1}/3問目`;
-    startBtn.disabled = true;
-    statusEl.innerHTML= `<div style="font-size:.8rem;color:var(--sub)">${q.answered || 0}/${q.participants || 0}人が回答済み</div>`;
-    // 集計バー
-    const votes = q.votes || {};
-    const total = Object.values(votes).reduce((s,v) => s+v, 0);
-    barsEl.innerHTML = (q.choices || []).map((c, i) => {
-      const count = votes[i] || 0;
-      const pct   = total > 0 ? Math.round(count / total * 100) : 0;
-      return `<div class="result-row">
-        <div class="result-label">${c}</div>
-        <div class="result-bar-bg"><div class="result-bar-fill" style="width:${pct}%"></div></div>
-        <div class="result-num">${count}票 (${pct}%)</div>
-      </div>`;
-    }).join('');
-  } else if (currentMode !== 'question') {
-    badge.className   = 'mode-badge mb-idle';
-    badge.textContent = '● 待機中';
-    startBtn.disabled = false;
-    barsEl.innerHTML  = '';
-    statusEl.innerHTML= '';
-  }
-}
 
 // ============================================================
 // ゲームモード
@@ -962,7 +828,6 @@ window.resetMode = function() {
   if (!confirm('現在のモードをリセットしてidleに戻しますか？')) return;
   if (gAutoTimer) { clearTimeout(gAutoTimer); gAutoTimer = null; }
   db.ref('mode').set('idle');
-  db.ref('question').set({ active: false });
   db.ref('game').set({ status: 'idle' });
   db.ref('message').set({ active: false });
   db.ref('aruana').set({ active: false });
