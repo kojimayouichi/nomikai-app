@@ -760,7 +760,7 @@ window.startAdventure = async function() {
   await db.ref('mode').set('adventure');
   await db.ref('adventure').set({
     status:'playing', phase:'selecting', round:1,
-    enemyHP:pCount*8, maxEnemyHP:pCount*8,
+    enemyHP:pCount*6, maxEnemyHP:pCount*6,
     playerHP, maxPlayerHP: 3,
     commands:{}, roundResult:null, stats, participants:partsMap,
     timerStart: firebase.database.ServerValue.TIMESTAMP,
