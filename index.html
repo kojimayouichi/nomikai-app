@@ -768,9 +768,6 @@ function renderAdventure() {
     phaseContent = `<div style="text-align:center;font-size:1.2rem;font-weight:900;padding:14px;color:${a.status==='victory'?'var(--teal)':'var(--red)'}">
       ${a.status==='victory'?'🎉 勝利！敵を倒した！':'😭 全滅... ゲームオーバー'}</div>`;
     stopAdvTimer();
-  } else if (a.phase === 'waiting') {
-    phaseContent = `<div style="text-align:center;color:var(--sub);font-size:.9rem;padding:14px">ホストがターンを開始するまで待ってね！</div>`;
-    stopAdvTimer();
   } else if (a.phase === 'selecting') {
     phaseContent = buildAdvSelectHTML(a);
     if (a.timerStart) startAdvTimer(a.timerStart);

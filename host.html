@@ -739,23 +739,20 @@ window.startAdventure = async function() {
   ids.forEach((id, i) => { partsMap[id] = i+1; stats[id] = { attack:0, support:0, heal:0 }; });
   await db.ref('mode').set('adventure');
   await db.ref('adventure').set({
-    status:'playing', phase:'waiting', round:0,
+    status:'playing', phase:'selecting', round:1,
     enemyHP:pCount*8, maxEnemyHP:pCount*8,
     partyHP:pCount*3, maxPartyHP:pCount*3,
     commands:{}, roundResult:null, stats, participants:partsMap,
-  });
-};
-
-window.startAdvTurn = function() {
-  const round = (advCurrentState.round || 0) + 1;
-  db.ref('adventure').update({
-    phase:'selecting', round, commands:{}, roundResult:null,
     timerStart: firebase.database.ServerValue.TIMESTAMP,
   });
 };
 
 window.nextAdvTurn = function() {
-  db.ref('adventure').update({ phase:'waiting', commands:{}, roundResult:null });
+  const nextRound = (advCurrentState.round || 1) + 1;
+  db.ref('adventure').update({
+    phase:'selecting', round:nextRound, commands:{}, roundResult:null,
+    timerStart: firebase.database.ServerValue.TIMESTAMP,
+  });
 };
 
 function updateAdvUI(a) {
@@ -797,10 +794,8 @@ function updateAdvUI(a) {
     badge.className = 'mode-badge mb-active';
     badge.textContent = `▶ ターン${a.round||0} 進行中`;
     startBtn.disabled = true;
-    if (a.phase === 'waiting') {
-      phaseHtml = `<button class="btn btn-primary btn-full" onclick="startAdvTurn()">▶ ターン${(a.round||0)+1} 開始</button>`;
-    } else if (a.phase === 'selecting') {
-      phaseHtml = `<div style="text-align:center;padding:8px;background:rgba(255,107,53,.1);border:1px solid var(--accent);border-radius:10px;font-size:.85rem">⏰ コマンド選択中... ${cmdCount}/${total}人</div>`;
+    if (a.phase === 'selecting') {
+      phaseHtml = `<div style="text-align:center;padding:8px;background:rgba(255,107,53,.1);border:1px solid var(--accent);border-radius:10px;font-size:.85rem">⏰ コマンド選択中... ${cmdCount}/${total}人が選択済み</div>`;
     } else if (a.phase === 'result' && a.roundResult) {
       const r = a.roundResult;
       phaseHtml = `
