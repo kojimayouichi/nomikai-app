@@ -726,32 +726,53 @@ function updateDrawUI(d) {
 // コマンドRPGアドベンチャーモード
 // ============================================================
 let advCurrentState = {};
+let lastAdvPhase = null;
+let advResultTimer = null;
 
 db.ref('adventure').on('value', snap => {
-  advCurrentState = snap.val() || {};
-  updateAdvUI(advCurrentState);
+  const a = snap.val() || {};
+  const phaseChanged = a.phase !== lastAdvPhase;
+  lastAdvPhase = a.phase;
+  advCurrentState = a;
+  updateAdvUI(a);
+
+  // result フェーズ以外になったらタイマーキャンセル
+  if (a.phase !== 'result') {
+    if (advResultTimer) { clearTimeout(advResultTimer); advResultTimer = null; }
+  } else if (phaseChanged && a.phase === 'result' && a.status === 'playing') {
+    // result フェーズに入ったら4秒後に自動で次のターンへ
+    if (advResultTimer) clearTimeout(advResultTimer);
+    advResultTimer = setTimeout(() => {
+      advResultTimer = null;
+      nextAdvTurn();
+    }, 4000);
+  }
 });
 
 window.startAdventure = async function() {
   const ids    = Object.keys(participants).sort();
   const pCount = Math.max(ids.length, 1);
-  const partsMap = {}, stats = {};
-  ids.forEach((id, i) => { partsMap[id] = i+1; stats[id] = { attack:0, support:0, heal:0 }; });
+  const partsMap = {}, stats = {}, playerHP = {};
+  ids.forEach((id, i) => { partsMap[id] = i+1; stats[id] = { attack:0, support:0, heal:0 }; playerHP[id] = 3; });
   await db.ref('mode').set('adventure');
   await db.ref('adventure').set({
     status:'playing', phase:'selecting', round:1,
     enemyHP:pCount*8, maxEnemyHP:pCount*8,
-    partyHP:pCount*3, maxPartyHP:pCount*3,
+    playerHP, maxPlayerHP: 3,
     commands:{}, roundResult:null, stats, participants:partsMap,
     timerStart: firebase.database.ServerValue.TIMESTAMP,
+    timerDuration: 15,
   });
 };
 
 window.nextAdvTurn = function() {
+  if (advResultTimer) { clearTimeout(advResultTimer); advResultTimer = null; }
   const nextRound = (advCurrentState.round || 1) + 1;
+  const timerDuration = Math.max(15 - (nextRound - 1) * 3, 3);
   db.ref('adventure').update({
     phase:'selecting', round:nextRound, commands:{}, roundResult:null,
     timerStart: firebase.database.ServerValue.TIMESTAMP,
+    timerDuration,
   });
 };
 
@@ -767,20 +788,29 @@ function updateAdvUI(a) {
   }
 
   const eHP = a.enemyHP||0, maxEHP = a.maxEnemyHP||1;
-  const pHP = a.partyHP||0,  maxPHP = a.maxPartyHP||1;
+  const maxPHP = a.maxPlayerHP||3;
   const total = Object.keys(a.participants||{}).length;
   const cmdCount = Object.keys(a.commands||{}).length;
 
+  const partyBars = Object.entries(a.participants||{}).sort((x,y)=>x[1]-y[1]).map(([uid,num]) => {
+    const hp = (a.playerHP||{})[uid] || 0;
+    return `<div style="flex:1;min-width:44px;text-align:center">
+      <div style="font-size:.6rem;color:var(--teal);margin-bottom:2px">${num}番</div>
+      <div style="height:6px;background:var(--surface2);border-radius:100px;overflow:hidden">
+        <div style="height:100%;width:${Math.round(hp/maxPHP*100)}%;background:${hp<=0?'var(--red)':'linear-gradient(90deg,var(--teal),var(--blue))'};border-radius:100px;transition:width .5s"></div>
+      </div>
+      <div style="font-size:.6rem;color:${hp<=0?'var(--red)':'var(--sub)'};margin-top:1px">${hp<=0?'💀':hp+'/'+maxPHP}</div>
+    </div>`;
+  }).join('');
+
   const barsHtml = `
     <div style="margin-bottom:10px">
-      <div style="display:flex;justify-content:space-between;font-size:.65rem;color:var(--red);margin-bottom:3px"><span>👹 スライムキング</span><span>HP ${eHP}/${maxEHP}</span></div>
+      <div style="display:flex;justify-content:space-between;font-size:.65rem;color:var(--red);margin-bottom:3px"><span>🐉 ドラゴン</span><span>HP ${eHP}/${maxEHP}</span></div>
       <div style="height:7px;background:var(--surface2);border-radius:100px;overflow:hidden;margin-bottom:8px">
         <div style="height:100%;width:${Math.round(eHP/maxEHP*100)}%;background:linear-gradient(90deg,var(--red),var(--accent));border-radius:100px;transition:width .5s"></div>
       </div>
-      <div style="display:flex;justify-content:space-between;font-size:.65rem;color:var(--teal);margin-bottom:3px"><span>🛡️ 味方パーティ</span><span>HP ${pHP}/${maxPHP}</span></div>
-      <div style="height:7px;background:var(--surface2);border-radius:100px;overflow:hidden">
-        <div style="height:100%;width:${Math.round(pHP/maxPHP*100)}%;background:linear-gradient(90deg,var(--teal),var(--blue));border-radius:100px;transition:width .5s"></div>
-      </div>
+      <div style="font-size:.65rem;color:var(--teal);margin-bottom:4px">🛡️ 味方パーティ HP</div>
+      <div style="display:flex;gap:6px">${partyBars}</div>
     </div>`;
 
   const cmdTally = Object.entries(a.participants||{}).sort((x,y)=>x[1]-y[1]).map(([uid,num]) => {
@@ -803,7 +833,8 @@ function updateAdvUI(a) {
           <div style="font-weight:700;margin-bottom:4px">${r.description}</div>
           <div style="color:var(--sub);font-size:.75rem">敵 −${r.dmgToEnemy}HP ／ 味方 −${r.dmgToParty}HP +${r.healAmount}回復</div>
         </div>
-        <button class="btn btn-blue btn-full" onclick="nextAdvTurn()">▶ 次のターンへ</button>`;
+        ${a.status === 'playing' ? `<div style="font-size:.75rem;color:var(--sub);text-align:center;margin-bottom:6px">⏱ 4秒後に自動で次のターンへ...</div>` : ''}
+        <button class="btn btn-blue btn-full" onclick="nextAdvTurn()">▶ 次のターンへ（今すぐ）</button>`;
     }
   } else if (a.status==='victory'||a.status==='defeat'||a.status==='result') {
     badge.className = 'mode-badge mb-done';
@@ -820,6 +851,13 @@ function updateAdvUI(a) {
 }
 
 window.endAdventure = function() {
+  const victoryRound = advCurrentState.round || 0;
+  let teamScore, teamLabel, teamRank;
+  if (victoryRound <= 2)      { teamScore = 100; teamLabel = '⚡ 超速クリア！最強チーム！';    teamRank = 'S'; }
+  else if (victoryRound <= 4) { teamScore = 85;  teamLabel = '🔥 素早いクリア！息ぴったり！'; teamRank = 'A'; }
+  else if (victoryRound <= 6) { teamScore = 70;  teamLabel = '👍 チームワーク良し！';         teamRank = 'B'; }
+  else                         { teamScore = 55;  teamLabel = '📈 まだまだ成長中！';            teamRank = 'C'; }
+
   db.ref('adventure/stats').once('value', snap => {
     const stats   = snap.val() || {};
     const partsSnap = advCurrentState.participants || {};
@@ -861,7 +899,7 @@ window.endAdventure = function() {
         score:scoreMap[key]||70, comment:commentMap[key]||'🌟 ユニークなコンビ！', nums:[num1,num2]
       };
     }
-    db.ref('adventure').update({ status:'result', compat, pairs });
+    db.ref('adventure').update({ status:'result', compat, pairs, victoryRound, teamScore, teamLabel, teamRank });
     setTimeout(() => db.ref('mode').set('end'), 3000);
   });
 };
@@ -872,6 +910,7 @@ window.endAdventure = function() {
 window.resetMode = function() {
   if (!confirm('現在のモードをリセットしてidleに戻しますか？')) return;
   if (gAutoTimer) { clearTimeout(gAutoTimer); gAutoTimer = null; }
+  if (advResultTimer) { clearTimeout(advResultTimer); advResultTimer = null; }
   db.ref('mode').set('idle');
   db.ref('game').set({ status: 'idle' });
   db.ref('aruana').set({ active: false });

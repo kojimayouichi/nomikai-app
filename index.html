@@ -752,7 +752,7 @@ function renderAdventure() {
   if (a.status === 'result') { renderAdvCompatResult(el, a); return; }
 
   const eHP = a.enemyHP||0, maxEHP = a.maxEnemyHP||1;
-  const pHP = a.partyHP||0, maxPHP = a.maxPartyHP||1;
+  const maxPHP = a.maxPlayerHP||3;
   const gameOver = (a.status==='victory'||a.status==='defeat');
   const events = a.eventLog ? Object.values(a.eventLog).sort((x,y)=>(x.ts||0)-(y.ts||0)).slice(-5) : [];
 
@@ -781,18 +781,28 @@ function renderAdventure() {
       <div class="card-label" style="color:var(--purple)">⚔️ コマンドRPG ${a.round?`ターン${a.round}`:''}</div>
       <!-- 敵 -->
       <div style="text-align:center;margin-bottom:12px">
-        <div style="font-size:3.5rem;line-height:1;margin-bottom:4px">👹</div>
-        <div style="font-size:.78rem;font-weight:700;margin-bottom:4px">スライムキング</div>
+        <img src="dragon.png" style="width:80px;height:80px;object-fit:contain;margin-bottom:4px;image-rendering:pixelated">
+        <div style="font-size:.78rem;font-weight:700;margin-bottom:4px">ドラゴン</div>
         <div style="font-size:.65rem;color:var(--red);margin-bottom:4px">HP ${eHP}/${maxEHP}</div>
         <div style="height:10px;background:var(--surface2);border-radius:100px;overflow:hidden;margin:0 16px">
           <div style="height:100%;width:${Math.round(eHP/maxEHP*100)}%;background:linear-gradient(90deg,var(--red),#ff6000);border-radius:100px;transition:width .5s"></div>
         </div>
       </div>
-      <!-- 味方HP -->
+      <!-- 味方HP（個別） -->
       <div style="margin-bottom:10px">
-        <div style="display:flex;justify-content:space-between;font-size:.65rem;color:var(--teal);margin-bottom:3px"><span>🛡️ 味方パーティ HP</span><span>${pHP}/${maxPHP}</span></div>
-        <div style="height:8px;background:var(--surface2);border-radius:100px;overflow:hidden">
-          <div style="height:100%;width:${Math.round(pHP/maxPHP*100)}%;background:linear-gradient(90deg,var(--teal),var(--blue));border-radius:100px;transition:width .5s"></div>
+        <div style="font-size:.65rem;color:var(--teal);margin-bottom:4px">🛡️ 味方パーティ HP</div>
+        <div style="display:flex;gap:6px">
+          ${Object.entries(a.participants||{}).sort((x,y)=>x[1]-y[1]).map(([uid,num]) => {
+            const hp = (a.playerHP||{})[uid] || 0;
+            const isMe = uid === myId;
+            return `<div style="flex:1;min-width:44px;text-align:center">
+              <div style="font-size:.6rem;color:${isMe?'var(--accent2)':'var(--teal)'};margin-bottom:2px">${num}番${isMe?'(自)':''}</div>
+              <div style="height:6px;background:var(--surface2);border-radius:100px;overflow:hidden">
+                <div style="height:100%;width:${Math.round(hp/maxPHP*100)}%;background:${hp<=0?'var(--red)':'linear-gradient(90deg,var(--teal),var(--blue))'};border-radius:100px;transition:width .5s"></div>
+              </div>
+              <div style="font-size:.6rem;color:${hp<=0?'var(--red)':'var(--sub)'};margin-top:1px">${hp<=0?'💀':hp+'/'+maxPHP}</div>
+            </div>`;
+          }).join('')}
         </div>
       </div>
       <!-- 仲間の選択状況 -->
@@ -817,7 +827,7 @@ function buildAdvSelectHTML(a) {
   return `
     <div style="text-align:center;margin-bottom:12px">
       <div style="font-size:.7rem;color:var(--sub);margin-bottom:4px">コマンドを選んでください</div>
-      <div style="font-size:2.8rem;font-weight:900;font-family:'Kaisei Opti',serif;color:var(--accent2)" id="advTimer">20</div>
+      <div style="font-size:2.8rem;font-weight:900;font-family:'Kaisei Opti',serif;color:var(--accent2)" id="advTimer">${advState.timerDuration || 15}</div>
       <div style="font-size:.65rem;color:var(--sub)">秒</div>
     </div>
     <button class="adv-cmd-btn" style="border-color:var(--red)" onclick="selectAdvCmd('attack')">
@@ -841,7 +851,7 @@ function buildAdvResultHTML(a) {
     <div style="background:var(--surface2);border-radius:14px;padding:14px;text-align:center">
       <div style="font-size:.95rem;font-weight:700;line-height:1.7;margin-bottom:8px">${r.description}</div>
       <div style="display:flex;gap:12px;justify-content:center;font-size:.82rem;flex-wrap:wrap">
-        ${r.dmgToEnemy>0?`<span style="color:var(--red)">👹 −${r.dmgToEnemy}HP</span>`:''}
+        ${r.dmgToEnemy>0?`<span style="color:var(--red)">🐉 −${r.dmgToEnemy}HP</span>`:''}
         ${r.dmgToParty>0?`<span style="color:var(--accent)">🛡️ −${r.dmgToParty}HP</span>`:''}
         ${r.healAmount>0?`<span style="color:var(--teal)">💊 +${r.healAmount}HP回復</span>`:''}
       </div>
@@ -862,9 +872,17 @@ function renderAdvCompatResult(el, a) {
       </div>
       <div style="font-size:.82rem;color:var(--sub)">${p.comment}</div>
     </div>`).join('');
+  const teamScoreHtml = a.teamScore != null ? `
+    <div style="text-align:center;margin-bottom:16px;padding:18px;background:linear-gradient(135deg,rgba(255,209,102,.1),rgba(167,139,250,.1));border-radius:16px;border:1.5px solid rgba(255,209,102,.3)">
+      <div style="font-size:.65rem;color:var(--accent2);letter-spacing:.15em;font-weight:700;margin-bottom:6px">🏆 チーム総合評価</div>
+      <div style="font-size:.85rem;color:var(--sub);margin-bottom:8px">${a.victoryRound || '?'}ターンでクリア！</div>
+      <div style="font-size:3rem;font-weight:900;font-family:'Kaisei Opti',serif;color:var(--accent2);line-height:1;margin-bottom:8px">${a.teamRank || '?'}</div>
+      <div style="font-size:1rem;font-weight:700">${a.teamLabel || ''}</div>
+    </div>` : '';
   el.innerHTML = `
     <div class="card fade-in">
       <div class="card-label" style="color:var(--purple)">⚔️ アドベンチャー相性診断</div>
+      ${teamScoreHtml}
       ${myComp?`<div style="text-align:center;margin:12px 0;padding:16px;background:rgba(167,139,250,.1);border-radius:14px;border:1px solid rgba(167,139,250,.3)">
         <div style="font-size:.7rem;color:var(--purple);margin-bottom:6px">あなたのタイプ</div>
         <div style="font-size:1.1rem;font-weight:700">${myComp.label}</div>
@@ -879,8 +897,9 @@ function startAdvTimer(timerStart) {
   if (advTimerStarted === timerStart) return;
   stopAdvTimer();
   advTimerStarted = timerStart;
+  const duration = advState.timerDuration || 15;
   advTimerInterval = setInterval(() => {
-    const remaining = Math.max(0, 20 - Math.floor((Date.now() - timerStart) / 1000));
+    const remaining = Math.max(0, duration - Math.floor((Date.now() - timerStart) / 1000));
     const el = document.getElementById('advTimer');
     if (el) { el.textContent = remaining; el.style.color = remaining<=5?'var(--red)':'var(--accent2)'; }
     if (remaining <= 0) { stopAdvTimer(); tryProcessAdvRound(); }
@@ -950,12 +969,35 @@ function processAdvRound() {
       description += ' 💢 瀕死の敵が怒り反撃！';
     }
 
+    // 個別HPへのダメージ処理
+    const playerHP = { ...(a.playerHP||{}) };
+    const maxPlayerHP = a.maxPlayerHP || 3;
+    if (dmgToParty > 0) {
+      const living = Object.keys(playerHP).filter(uid => playerHP[uid] > 0);
+      for (let d = 0; d < dmgToParty && living.length > 0; d++) {
+        const targetUid = living[Math.floor(Math.random() * living.length)];
+        playerHP[targetUid] = Math.max(0, playerHP[targetUid] - 1);
+        if (playerHP[targetUid] <= 0) {
+          const num = (a.participants||{})[targetUid];
+          description += ` 💀 ${num}番が力尽きた！`;
+          living.splice(living.indexOf(targetUid), 1);
+        }
+      }
+    }
+    if (healAmount > 0) {
+      const sorted = Object.entries(playerHP).filter(([,hp]) => hp > 0).sort(([,x],[,y]) => x - y);
+      if (sorted.length > 0) {
+        const [healUid] = sorted[0];
+        playerHP[healUid] = Math.min(maxPlayerHP, playerHP[healUid] + healAmount);
+      }
+    }
+
+    const anyDefeated = Object.values(playerHP).some(hp => hp <= 0);
     const newEnemyHP = Math.max(0, (a.enemyHP||0) - dmgToEnemy);
-    const newPartyHP = Math.max(0, Math.min(a.maxPartyHP||0, (a.partyHP||0) - dmgToParty + healAmount));
-    const newStatus  = newEnemyHP<=0 ? 'victory' : newPartyHP<=0 ? 'defeat' : 'playing';
+    const newStatus  = newEnemyHP<=0 ? 'victory' : anyDefeated ? 'defeat' : 'playing';
     const roundResult = { dmgToEnemy, dmgToParty, healAmount, description, attackCount, supportCount, healCount, missing };
 
-    db.ref('adventure').update({ phase:'result', status:newStatus, enemyHP:newEnemyHP, partyHP:newPartyHP, roundResult });
+    db.ref('adventure').update({ phase:'result', status:newStatus, enemyHP:newEnemyHP, playerHP, roundResult });
     db.ref('adventure/eventLog').push({ text:description, ts:firebase.database.ServerValue.TIMESTAMP });
   });
 }
