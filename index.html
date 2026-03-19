@@ -966,7 +966,8 @@ function processAdvRound() {
       description = `😅 誰も攻撃しなかった... 敵が反撃！`;
     } else if (attackCount === total) {
       dmgToEnemy = Math.ceil(attackCount * 0.5);
-      description = `🛡️ 全員がたたかう！→ 敵が防御！ダメージ ${dmgToEnemy}... おうえんまほうが必要だ！`;
+      dmgToParty = 1;
+      description = `🛡️ 全員がたたかう！→ 敵が防御して反撃！ダメージ ${dmgToEnemy}... おうえんまほうが必要だ！`;
     } else if (supportCount > 0 && attackCount > 0) {
       dmgToEnemy = attackCount * 3;
       description = `✨ おうえんまほう炸裂！${attackCount}人が大ダメージ！合計 ${dmgToEnemy}！`;
