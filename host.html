@@ -723,28 +723,39 @@ function updateDrawUI(d) {
 }
 
 // ============================================================
-// ミニアドベンチャーモード
+// コマンドRPGアドベンチャーモード
 // ============================================================
-const ADV_ITEMS_INIT = {
-  '0_3':{ type:'attack', emoji:'⚔️' }, '2_2':{ type:'attack', emoji:'⚔️' }, '5_2':{ type:'attack', emoji:'⚔️' },
-  '1_1':{ type:'heal',   emoji:'💊' }, '3_3':{ type:'heal',   emoji:'💊' },
-  '2_0':{ type:'defense',emoji:'🛡️' }, '4_4':{ type:'defense',emoji:'🛡️' },
-};
+let advCurrentState = {};
 
-db.ref('adventure').on('value', snap => { updateAdvUI(snap.val() || {}); });
+db.ref('adventure').on('value', snap => {
+  advCurrentState = snap.val() || {};
+  updateAdvUI(advCurrentState);
+});
 
 window.startAdventure = async function() {
   const ids    = Object.keys(participants).sort();
   const pCount = Math.max(ids.length, 1);
-  const players = {};
-  ids.forEach((id, i) => {
-    players[id] = { hp:3, row:0, col:0, num:i+1, alive:true,
-      items:{ attack:0, heal:0, defense:0 }, stats:{ attacked:0, healed:0, defended:0 } };
-  });
+  const partsMap = {}, stats = {};
+  ids.forEach((id, i) => { partsMap[id] = i+1; stats[id] = { attack:0, support:0, heal:0 }; });
   await db.ref('mode').set('adventure');
   await db.ref('adventure').set({
-    status:'playing', enemyHP:pCount*3, maxEnemyHP:pCount*3, players, events:{},
+    status:'playing', phase:'waiting', round:0,
+    enemyHP:pCount*8, maxEnemyHP:pCount*8,
+    partyHP:pCount*3, maxPartyHP:pCount*3,
+    commands:{}, roundResult:null, stats, participants:partsMap,
   });
+};
+
+window.startAdvTurn = function() {
+  const round = (advCurrentState.round || 0) + 1;
+  db.ref('adventure').update({
+    phase:'selecting', round, commands:{}, roundResult:null,
+    timerStart: firebase.database.ServerValue.TIMESTAMP,
+  });
+};
+
+window.nextAdvTurn = function() {
+  db.ref('adventure').update({ phase:'waiting', commands:{}, roundResult:null });
 };
 
 function updateAdvUI(a) {
@@ -752,71 +763,107 @@ function updateAdvUI(a) {
   const statusEl = document.getElementById('advStatus');
   const startBtn = document.getElementById('advStartBtn');
   if (!badge) return;
-  if (currentMode === 'adventure' && a.status === 'playing') {
+
+  if (currentMode !== 'adventure' || !a.status || a.status === 'idle') {
+    badge.className = 'mode-badge mb-idle'; badge.textContent = '● 待機中';
+    startBtn.disabled = false; statusEl.innerHTML = ''; return;
+  }
+
+  const eHP = a.enemyHP||0, maxEHP = a.maxEnemyHP||1;
+  const pHP = a.partyHP||0,  maxPHP = a.maxPartyHP||1;
+  const total = Object.keys(a.participants||{}).length;
+  const cmdCount = Object.keys(a.commands||{}).length;
+
+  const barsHtml = `
+    <div style="margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between;font-size:.65rem;color:var(--red);margin-bottom:3px"><span>👹 スライムキング</span><span>HP ${eHP}/${maxEHP}</span></div>
+      <div style="height:7px;background:var(--surface2);border-radius:100px;overflow:hidden;margin-bottom:8px">
+        <div style="height:100%;width:${Math.round(eHP/maxEHP*100)}%;background:linear-gradient(90deg,var(--red),var(--accent));border-radius:100px;transition:width .5s"></div>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:.65rem;color:var(--teal);margin-bottom:3px"><span>🛡️ 味方パーティ</span><span>HP ${pHP}/${maxPHP}</span></div>
+      <div style="height:7px;background:var(--surface2);border-radius:100px;overflow:hidden">
+        <div style="height:100%;width:${Math.round(pHP/maxPHP*100)}%;background:linear-gradient(90deg,var(--teal),var(--blue));border-radius:100px;transition:width .5s"></div>
+      </div>
+    </div>`;
+
+  const cmdTally = Object.entries(a.participants||{}).sort((x,y)=>x[1]-y[1]).map(([uid,num]) => {
+    const cmd = (a.commands||{})[uid];
+    const lbl = cmd==='attack'?'⚔️':cmd==='support'?'✨':cmd==='heal'?'💊':'…';
+    return `<span style="padding:3px 10px;background:${cmd?'rgba(6,214,160,.15)':'var(--surface2)'};border-radius:6px;font-size:.8rem">${num}番 ${lbl}</span>`;
+  }).join('');
+
+  let phaseHtml = '';
+  if (a.status === 'playing') {
     badge.className = 'mode-badge mb-active';
-    badge.textContent = '▶ 進行中';
+    badge.textContent = `▶ ターン${a.round||0} 進行中`;
     startBtn.disabled = true;
-    const eHP = a.enemyHP || 0, maxEHP = a.maxEnemyHP || 1;
-    const pRows = Object.entries(a.players || {}).sort((x,y)=>x[1].num-y[1].num)
-      .map(([,p]) => `<div style="display:flex;justify-content:space-between;padding:5px 10px;background:var(--surface2);border-radius:8px;margin-bottom:3px;font-size:.8rem">
-        <span>${p.num}番 ${'❤️'.repeat(Math.max(0,p.hp))}${!p.alive?'💀':''}</span>
-        <span style="color:var(--sub)">⚔️${(p.items||{}).attack||0} 💊${(p.items||{}).heal||0} 🛡️${(p.items||{}).defense||0}</span>
-      </div>`).join('');
-    statusEl.innerHTML = `<div style="margin-bottom:10px">
-      <div style="font-size:.72rem;color:var(--red);margin-bottom:4px">👹 敵 HP ${eHP}/${maxEHP}</div>
-      <div style="height:8px;background:var(--surface2);border-radius:100px;overflow:hidden">
-        <div style="height:100%;width:${Math.round(eHP/maxEHP*100)}%;background:linear-gradient(90deg,var(--red),var(--accent));border-radius:100px;transition:width .4s"></div>
-      </div></div>${pRows}`;
-  } else if (currentMode === 'adventure' && (a.status === 'victory' || a.status === 'defeat' || a.status === 'result')) {
+    if (a.phase === 'waiting') {
+      phaseHtml = `<button class="btn btn-primary btn-full" onclick="startAdvTurn()">▶ ターン${(a.round||0)+1} 開始</button>`;
+    } else if (a.phase === 'selecting') {
+      phaseHtml = `<div style="text-align:center;padding:8px;background:rgba(255,107,53,.1);border:1px solid var(--accent);border-radius:10px;font-size:.85rem">⏰ コマンド選択中... ${cmdCount}/${total}人</div>`;
+    } else if (a.phase === 'result' && a.roundResult) {
+      const r = a.roundResult;
+      phaseHtml = `
+        <div style="padding:10px;background:var(--surface2);border-radius:10px;margin-bottom:10px;font-size:.82rem">
+          <div style="font-weight:700;margin-bottom:4px">${r.description}</div>
+          <div style="color:var(--sub);font-size:.75rem">敵 −${r.dmgToEnemy}HP ／ 味方 −${r.dmgToParty}HP +${r.healAmount}回復</div>
+        </div>
+        <button class="btn btn-blue btn-full" onclick="nextAdvTurn()">▶ 次のターンへ</button>`;
+    }
+  } else if (a.status==='victory'||a.status==='defeat'||a.status==='result') {
     badge.className = 'mode-badge mb-done';
-    badge.textContent = a.status === 'victory' || a.status === 'result' ? '✅ 勝利！' : '💀 全滅';
+    badge.textContent = (a.status==='victory'||a.status==='result') ? '✅ 勝利！' : '💀 全滅';
     startBtn.disabled = true;
     if (a.status !== 'result') {
-      statusEl.innerHTML = `<button class="btn btn-primary btn-full" onclick="endAdventure()">🏁 終了・相性発表</button>`;
+      phaseHtml = `<button class="btn btn-primary btn-full" onclick="endAdventure()">🏁 終了・相性発表</button>`;
     } else {
-      statusEl.innerHTML = `<div style="color:var(--teal);font-size:.85rem;text-align:center;padding:8px">相性発表中...</div>`;
+      phaseHtml = `<div style="color:var(--teal);text-align:center;padding:8px;font-size:.85rem">相性発表中...</div>`;
     }
-  } else if (currentMode !== 'adventure') {
-    badge.className = 'mode-badge mb-idle';
-    badge.textContent = '● 待機中';
-    startBtn.disabled = false;
-    statusEl.innerHTML = '';
   }
+
+  statusEl.innerHTML = barsHtml + `<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px">${cmdTally}</div>` + phaseHtml;
 }
 
 window.endAdventure = function() {
-  db.ref('adventure/players').once('value', snap => {
-    const players = snap.val() || {};
-    const entries = Object.entries(players);
-    const compat = {};
-    entries.forEach(([uid, p]) => {
-      const s = p.stats || {};
+  db.ref('adventure/stats').once('value', snap => {
+    const stats   = snap.val() || {};
+    const partsSnap = advCurrentState.participants || {};
+    const entries = Object.entries(partsSnap);
+    const compat  = {};
+    entries.forEach(([uid, num]) => {
+      const s = stats[uid] || {};
+      const atk = s.attack||0, sup = s.support||0, heal = s.heal||0;
+      const tot = atk+sup+heal || 1;
       let type, label;
-      if ((s.attacked||0) >= 3)     { type='fighter'; label='⚔️ 戦士型 — 積極的に攻めるタイプ！' }
-      else if ((s.healed||0) >= 2)  { type='healer';  label='💊 回復型 — 自分を大切にするタイプ！' }
-      else if ((s.defended||0) >= 2){ type='tank';    label='🛡️ 守備型 — 堅実・慎重なタイプ！' }
-      else                           { type='balanced';label='⚖️ バランス型 — 何でもこなせるタイプ！' }
-      compat[uid] = { type, label, num: p.num };
+      if (atk/tot >= 0.6)      { type='fighter'; label='⚔️ 戦士型 — 積極的に攻め続けるタイプ！' }
+      else if (sup/tot >= 0.5) { type='support'; label='✨ サポート型 — 仲間を活かすのが得意！' }
+      else if (heal/tot >= 0.5){ type='healer';  label='💊 ヒーラー型 — みんなを守る優しいタイプ！' }
+      else                      { type='balanced';label='⚖️ バランス型 — 状況に合わせて動ける！' }
+      compat[uid] = { type, label, num };
     });
     const scoreMap = {
-      'fighter-healer':95,'fighter-tank':70,'healer-tank':90,
-      'fighter-balanced':80,'healer-balanced':85,'tank-balanced':75,
-      'fighter-fighter':65,'healer-healer':70,'tank-tank':75,'balanced-balanced':70,
+      'fighter-healer':95,'fighter-support':90,'support-healer':80,
+      'fighter-balanced':80,'support-balanced':85,'healer-balanced':80,
+      'fighter-fighter':65,'support-support':70,'healer-healer':75,'balanced-balanced':70,
     };
     const commentMap = {
-      'fighter-healer':'⚡ 攻守完璧！最強のコンビ！','fighter-tank':'🔥 猛攻と鉄壁の無敵タッグ！',
-      'healer-tank':'💝 安心感バツグン！縁の下の力持ちコンビ！',
-      'fighter-balanced':'🎯 どんな状況も乗り越えられる！','healer-balanced':'🌸 優しさと冷静さで最高コンビ！',
-      'tank-balanced':'🧘 安定感のある落ち着いた2人！',
-      'fighter-fighter':'⚔️ 熱いライバル！切磋琢磨できる！','healer-healer':'💊 互いを思いやる優しいコンビ！',
-      'tank-tank':'🛡️ 鉄壁コンビ！絶対崩れない！','balanced-balanced':'✨ なんでもこなせる万能コンビ！',
+      'fighter-healer':'⚡ 攻めと回復の完璧コンビ！最強！',
+      'fighter-support':'🔥 全力サポートで爆発的な威力！',
+      'support-healer':'💝 やさしさあふれる最高のコンビ！',
+      'fighter-balanced':'🎯 どんな状況も乗り越えられる！',
+      'support-balanced':'🌸 冷静さと包容力の黄金コンビ！',
+      'healer-balanced':'🌿 安定感と癒やしの最強タッグ！',
+      'fighter-fighter':'⚔️ 熱いライバル！切磋琢磨できる！',
+      'support-support':'✨ 互いを高め合うサポートコンビ！',
+      'healer-healer':'💊 優しさあふれる癒やしのコンビ！',
+      'balanced-balanced':'🌟 なんでもこなせる万能コンビ！',
     };
     const pairs = {};
     for (let i=0;i<entries.length;i++) for (let j=i+1;j<entries.length;j++) {
-      const [uid1,p1]=entries[i],[uid2,p2]=entries[j];
+      const [uid1,num1]=entries[i],[uid2,num2]=entries[j];
       const key=[compat[uid1].type,compat[uid2].type].sort().join('-');
-      pairs[`${Math.min(p1.num,p2.num)}_${Math.max(p1.num,p2.num)}`]={
-        score:scoreMap[key]||70, comment:commentMap[key]||'🌟 ユニークなコンビ！', nums:[p1.num,p2.num]
+      pairs[`${Math.min(num1,num2)}_${Math.max(num1,num2)}`]={
+        score:scoreMap[key]||70, comment:commentMap[key]||'🌟 ユニークなコンビ！', nums:[num1,num2]
       };
     }
     db.ref('adventure').update({ status:'result', compat, pairs });
