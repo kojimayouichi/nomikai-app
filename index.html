@@ -253,6 +253,14 @@ db.ref('adventure').on('value', snap => {
   const a = snap.val() || {};
   if (a.round && a.round !== lastAdvRound) { lastAdvRound = a.round; myAdvCommand = null; }
   advState = a;
+  // 全員コマンド選択済みか確認（サーバー確定データで判断）
+  if (a.phase === 'selecting' && a.participants && a.commands) {
+    const allSubmitted = Object.keys(a.participants).every(uid => a.commands[uid]);
+    if (allSubmitted) {
+      stopAdvTimer();
+      setTimeout(tryProcessAdvRound, 300);
+    }
+  }
   if (currentMode === 'adventure') renderAdventure();
 });
 
@@ -927,14 +935,6 @@ window.selectAdvCmd = function(cmd) {
   myAdvCommand = cmd;
   db.ref(`adventure/commands/${myId}`).set(cmd);
   db.ref(`adventure/stats/${myId}/${cmd}`).transaction(v => (v||0)+1);
-  // 全員選んだか確認（Firebaseから最新データを取得して判断）
-  const total = Object.keys(advState.participants||{}).length;
-  db.ref('adventure/commands').once('value', snap => {
-    const cmds = snap.val() || {};
-    if (Object.keys(cmds).length >= total) {
-      setTimeout(tryProcessAdvRound, 300);
-    }
-  });
   renderAdventure();
 };
 
