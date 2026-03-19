@@ -927,11 +927,14 @@ window.selectAdvCmd = function(cmd) {
   myAdvCommand = cmd;
   db.ref(`adventure/commands/${myId}`).set(cmd);
   db.ref(`adventure/stats/${myId}/${cmd}`).transaction(v => (v||0)+1);
-  // 全員選んだか確認
+  // 全員選んだか確認（Firebaseから最新データを取得して判断）
   const total = Object.keys(advState.participants||{}).length;
-  if (Object.keys(advState.commands||{}).length + 1 >= total) {
-    setTimeout(tryProcessAdvRound, 600);
-  }
+  db.ref('adventure/commands').once('value', snap => {
+    const cmds = snap.val() || {};
+    if (Object.keys(cmds).length >= total) {
+      setTimeout(tryProcessAdvRound, 300);
+    }
+  });
   renderAdventure();
 };
 
