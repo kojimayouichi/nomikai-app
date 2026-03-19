@@ -176,6 +176,21 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
     </div>
   </div>
 
+  <!-- ミニアドベンチャー -->
+  <div class="section">
+    <div class="section-title">🗡️ ミニアドベンチャー相性診断</div>
+    <div class="card">
+      <div class="card-accent ca-purple"></div>
+      <div class="mode-badge mb-idle" id="advBadge">● 待機中</div>
+      <div style="font-size:.85rem;color:var(--sub);margin-bottom:14px">迷路を探索してアイテムを集め、みんなで敵を倒そう！行動パターンで相性診断。</div>
+      <div class="btn-row">
+        <button class="btn btn-purple" id="advStartBtn" onclick="startAdventure()">▶ アドベンチャー開始</button>
+        <button class="btn btn-ghost btn-sm" onclick="resetMode()">リセット</button>
+      </div>
+      <div id="advStatus" style="margin-top:14px"></div>
+    </div>
+  </div>
+
 </div>
 
 <!-- QRコード生成ライブラリ -->
@@ -255,7 +270,7 @@ db.ref('presence').on('value', snap => {
 
 db.ref('mode').on('value', snap => {
   currentMode = snap.val() || 'idle';
-  const modeLabels = { idle:'待機', question:'質問', game:'ゲーム', message:'メッセージ', end:'終了', aruana:'あるある', cardgame:'カード', drawing:'お絵かき' };
+  const modeLabels = { idle:'待機', game:'ゲーム', end:'終了', aruana:'あるある', cardgame:'カード', drawing:'お絵かき', adventure:'アドベンチャー' };
   document.getElementById('sMode').textContent = modeLabels[currentMode] || currentMode;
   syncModeUI(currentMode);
 });
@@ -265,6 +280,7 @@ function syncModeUI(mode) {
   const btnMap = {
     game: 'gStartBtn',
     aruana: 'aStartBtn', cardgame: 'cgStartBtn', drawing: 'dwStartBtn',
+    adventure: 'advStartBtn',
   };
   // 実行中モード以外のボタンを無効化
   Object.entries(btnMap).forEach(([m, id]) => {
@@ -276,7 +292,8 @@ function syncModeUI(mode) {
     { mode: 'game',     badge: 'gBadge', status: 'gResults',    extra: null },
     { mode: 'aruana',   badge: 'aBadge', status: 'aStatus',     extra: null },
     { mode: 'cardgame', badge: 'cgBadge',status: 'cgStatus',    extra: null },
-    { mode: 'drawing',  badge: 'dwBadge',status: 'dwStatus',    extra: null },
+    { mode: 'drawing',   badge: 'dwBadge',  status: 'dwStatus',  extra: null },
+    { mode: 'adventure', badge: 'advBadge', status: 'advStatus', extra: null },
   ];
   resetMap.forEach(({ mode: m, badge, status, extra }) => {
     if (mode !== m) {
@@ -706,6 +723,108 @@ function updateDrawUI(d) {
 }
 
 // ============================================================
+// ミニアドベンチャーモード
+// ============================================================
+const ADV_ITEMS_INIT = {
+  '0_3':{ type:'attack', emoji:'⚔️' }, '2_2':{ type:'attack', emoji:'⚔️' }, '5_2':{ type:'attack', emoji:'⚔️' },
+  '1_1':{ type:'heal',   emoji:'💊' }, '3_3':{ type:'heal',   emoji:'💊' },
+  '2_0':{ type:'defense',emoji:'🛡️' }, '4_4':{ type:'defense',emoji:'🛡️' },
+};
+
+db.ref('adventure').on('value', snap => { updateAdvUI(snap.val() || {}); });
+
+window.startAdventure = async function() {
+  const ids    = Object.keys(participants).sort();
+  const pCount = Math.max(ids.length, 1);
+  const players = {};
+  ids.forEach((id, i) => {
+    players[id] = { hp:3, row:0, col:0, num:i+1, alive:true,
+      items:{ attack:0, heal:0, defense:0 }, stats:{ attacked:0, healed:0, defended:0 } };
+  });
+  await db.ref('mode').set('adventure');
+  await db.ref('adventure').set({
+    status:'playing', enemyHP:pCount*3, maxEnemyHP:pCount*3, players, events:{},
+  });
+};
+
+function updateAdvUI(a) {
+  const badge    = document.getElementById('advBadge');
+  const statusEl = document.getElementById('advStatus');
+  const startBtn = document.getElementById('advStartBtn');
+  if (!badge) return;
+  if (currentMode === 'adventure' && a.status === 'playing') {
+    badge.className = 'mode-badge mb-active';
+    badge.textContent = '▶ 進行中';
+    startBtn.disabled = true;
+    const eHP = a.enemyHP || 0, maxEHP = a.maxEnemyHP || 1;
+    const pRows = Object.entries(a.players || {}).sort((x,y)=>x[1].num-y[1].num)
+      .map(([,p]) => `<div style="display:flex;justify-content:space-between;padding:5px 10px;background:var(--surface2);border-radius:8px;margin-bottom:3px;font-size:.8rem">
+        <span>${p.num}番 ${'❤️'.repeat(Math.max(0,p.hp))}${!p.alive?'💀':''}</span>
+        <span style="color:var(--sub)">⚔️${(p.items||{}).attack||0} 💊${(p.items||{}).heal||0} 🛡️${(p.items||{}).defense||0}</span>
+      </div>`).join('');
+    statusEl.innerHTML = `<div style="margin-bottom:10px">
+      <div style="font-size:.72rem;color:var(--red);margin-bottom:4px">👹 敵 HP ${eHP}/${maxEHP}</div>
+      <div style="height:8px;background:var(--surface2);border-radius:100px;overflow:hidden">
+        <div style="height:100%;width:${Math.round(eHP/maxEHP*100)}%;background:linear-gradient(90deg,var(--red),var(--accent));border-radius:100px;transition:width .4s"></div>
+      </div></div>${pRows}`;
+  } else if (currentMode === 'adventure' && (a.status === 'victory' || a.status === 'defeat' || a.status === 'result')) {
+    badge.className = 'mode-badge mb-done';
+    badge.textContent = a.status === 'victory' || a.status === 'result' ? '✅ 勝利！' : '💀 全滅';
+    startBtn.disabled = true;
+    if (a.status !== 'result') {
+      statusEl.innerHTML = `<button class="btn btn-primary btn-full" onclick="endAdventure()">🏁 終了・相性発表</button>`;
+    } else {
+      statusEl.innerHTML = `<div style="color:var(--teal);font-size:.85rem;text-align:center;padding:8px">相性発表中...</div>`;
+    }
+  } else if (currentMode !== 'adventure') {
+    badge.className = 'mode-badge mb-idle';
+    badge.textContent = '● 待機中';
+    startBtn.disabled = false;
+    statusEl.innerHTML = '';
+  }
+}
+
+window.endAdventure = function() {
+  db.ref('adventure/players').once('value', snap => {
+    const players = snap.val() || {};
+    const entries = Object.entries(players);
+    const compat = {};
+    entries.forEach(([uid, p]) => {
+      const s = p.stats || {};
+      let type, label;
+      if ((s.attacked||0) >= 3)     { type='fighter'; label='⚔️ 戦士型 — 積極的に攻めるタイプ！' }
+      else if ((s.healed||0) >= 2)  { type='healer';  label='💊 回復型 — 自分を大切にするタイプ！' }
+      else if ((s.defended||0) >= 2){ type='tank';    label='🛡️ 守備型 — 堅実・慎重なタイプ！' }
+      else                           { type='balanced';label='⚖️ バランス型 — 何でもこなせるタイプ！' }
+      compat[uid] = { type, label, num: p.num };
+    });
+    const scoreMap = {
+      'fighter-healer':95,'fighter-tank':70,'healer-tank':90,
+      'fighter-balanced':80,'healer-balanced':85,'tank-balanced':75,
+      'fighter-fighter':65,'healer-healer':70,'tank-tank':75,'balanced-balanced':70,
+    };
+    const commentMap = {
+      'fighter-healer':'⚡ 攻守完璧！最強のコンビ！','fighter-tank':'🔥 猛攻と鉄壁の無敵タッグ！',
+      'healer-tank':'💝 安心感バツグン！縁の下の力持ちコンビ！',
+      'fighter-balanced':'🎯 どんな状況も乗り越えられる！','healer-balanced':'🌸 優しさと冷静さで最高コンビ！',
+      'tank-balanced':'🧘 安定感のある落ち着いた2人！',
+      'fighter-fighter':'⚔️ 熱いライバル！切磋琢磨できる！','healer-healer':'💊 互いを思いやる優しいコンビ！',
+      'tank-tank':'🛡️ 鉄壁コンビ！絶対崩れない！','balanced-balanced':'✨ なんでもこなせる万能コンビ！',
+    };
+    const pairs = {};
+    for (let i=0;i<entries.length;i++) for (let j=i+1;j<entries.length;j++) {
+      const [uid1,p1]=entries[i],[uid2,p2]=entries[j];
+      const key=[compat[uid1].type,compat[uid2].type].sort().join('-');
+      pairs[`${Math.min(p1.num,p2.num)}_${Math.max(p1.num,p2.num)}`]={
+        score:scoreMap[key]||70, comment:commentMap[key]||'🌟 ユニークなコンビ！', nums:[p1.num,p2.num]
+      };
+    }
+    db.ref('adventure').update({ status:'result', compat, pairs });
+    setTimeout(() => db.ref('mode').set('end'), 3000);
+  });
+};
+
+// ============================================================
 // 全体操作
 // ============================================================
 window.resetMode = function() {
@@ -716,6 +835,7 @@ window.resetMode = function() {
   db.ref('aruana').set({ active: false });
   db.ref('cardgame').set({ active: false });
   db.ref('drawing').set({ active: false });
+  db.ref('adventure').set({ status: 'idle' });
 };
 
 window.endAll = function() {
