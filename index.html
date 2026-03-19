@@ -267,6 +267,15 @@ db.ref('adventure').on('value', snap => {
 // ============================================================
 // メイン描画
 // ============================================================
+function renderBlocked(modeName) {
+  document.getElementById('mainContent').innerHTML = `
+    <div class="waiting fade-in">
+      <div class="waiting-icon">🙏</div>
+      <div style="font-size:1rem;font-weight:700;margin-bottom:8px">${modeName} 進行中</div>
+      <div class="waiting-text">終了までお待ちください</div>
+    </div>`;
+}
+
 function render() {
   if      (currentMode === 'idle')     renderIdle();
   else if (currentMode === 'game')     renderGame();
@@ -298,6 +307,7 @@ function renderGame() {
     el.innerHTML = `<div class="waiting fade-in"><div class="waiting-icon">🎮</div><div class="waiting-text">ゲームを読み込み中...</div></div>`;
     return;
   }
+  if (g.participantIds && !g.participantIds[myId]) { renderBlocked('🔴 早押しゲーム'); return; }
 
   if (g.status === 'countdown') {
     renderBuzzCountdown(el, g);
@@ -412,6 +422,7 @@ function renderAruana() {
     el.innerHTML = `<div class="waiting fade-in"><div class="waiting-icon">🙋</div><div class="waiting-text">読み込み中...</div></div>`;
     return;
   }
+  if (a.participantIds && !a.participantIds[myId]) { renderBlocked('🙋 あるある？ないない？'); return; }
   const answered    = a.answered || 0;
   const parts       = a.participants || 1;
   const allAnswered = answered >= parts;
@@ -481,6 +492,7 @@ function renderCard() {
     el.innerHTML = `<div class="waiting fade-in"><div class="waiting-icon">🃏</div><div class="waiting-text">読み込み中...</div></div>`;
     return;
   }
+  if (c.nums && c.nums[myId] === undefined) { renderBlocked('🃏 カードゲーム'); return; }
 
   // ルール説明画面（ラウンド1かつ未確認のみ）
   if (!rulesAcknowledged && (c.round || 1) === 1 && !c.results) {
@@ -605,6 +617,7 @@ function renderDraw() {
     el.innerHTML = `<div class="waiting fade-in"><div class="waiting-icon">🎨</div><div class="waiting-text">読み込み中...</div></div>`;
     return;
   }
+  if (d.participantIds && !d.participantIds[myId]) { renderBlocked('🎨 お絵かきゲーム'); return; }
   const isCorrect  = d.status === 'correct';
   const myNextDone = (d.nextReady || {})[myId];
   const isLast     = (d.round || 1) >= 3;
@@ -762,6 +775,7 @@ function renderAdventure() {
     return;
   }
   if (a.status === 'result') { renderAdvCompatResult(el, a); return; }
+  if (a.participants && !a.participants[myId]) { renderBlocked('⚔️ アドベンチャー'); return; }
 
   const eHP = a.enemyHP||0, maxEHP = a.maxEnemyHP||1;
   const maxPHP = a.maxPlayerHP||3;

@@ -349,11 +349,13 @@ function startBuzzRound() {
   }
   document.getElementById('sRound').textContent = gRound + '/2';
   // カウントダウン開始
+  const pIds = {}; Object.keys(participants).forEach(id => pIds[id] = true);
   db.ref('game').set({
     status:        'countdown',
     round:         gRound,
     countdownStart: firebase.database.ServerValue.TIMESTAMP,
-    results:       {}
+    results:       {},
+    participantIds: pIds
   });
   // 10秒後にready
   if (gAutoTimer) clearTimeout(gAutoTimer);
@@ -463,15 +465,17 @@ function publishNextAruana() {
   aruUsed.push(idx);
   aruRound++;
   const pCount = Object.keys(participants).length;
+  const pIds = {}; Object.keys(participants).forEach(id => pIds[id] = true);
   db.ref('aruana').set({
-    active:       true,
-    round:        aruRound,
-    text:         ARUANA[idx],
-    aru:          0,
-    nai:          0,
-    answered:     0,
-    participants: pCount,
-    nextReady:    {}
+    active:        true,
+    round:         aruRound,
+    text:          ARUANA[idx],
+    aru:           0,
+    nai:           0,
+    answered:      0,
+    participants:  pCount,
+    nextReady:     {},
+    participantIds: pIds
   });
   document.getElementById('sRound').textContent = aruRound + '/3';
 }
@@ -669,13 +673,15 @@ function publishNextDrawRound() {
   const drawerIdx = Math.floor(Math.random() * ids.length);
   const drawerId  = ids[drawerIdx];
   const drawerNum = drawerIdx + 1;
+  const pIds = {}; ids.forEach(id => pIds[id] = true);
   db.ref('drawing').set({
     round: drawRound, active: true,
     drawerId, drawerNum,
-    topic:     DRAW_TOPICS[idx],
-    strokes:   {},
-    status:    'drawing',
-    nextReady: {}
+    topic:          DRAW_TOPICS[idx],
+    strokes:        {},
+    status:         'drawing',
+    nextReady:      {},
+    participantIds: pIds
   });
   document.getElementById('sRound').textContent = drawRound + '/3';
 }
